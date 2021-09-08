@@ -1,6 +1,8 @@
 options("repos" =
   c(CRAN = "https://repo.miserver.it.umich.edu/cran/"))
 
+# need to install libgit2 before
+
 # vscode package
 install.packages("lintr")
 install.packages("languageserver")

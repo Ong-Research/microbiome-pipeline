@@ -6,3 +6,4 @@ dependencies:
   - python=3.9
   - snakemake=6.7
   - r-base=4.1
+  - libgit2=1.2

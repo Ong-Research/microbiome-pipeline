@@ -1,13 +1,16 @@
 
 rule plot_quality_profiles:
   input:
-    lambda wc: [sample_dict[wc.sample]["R1"], sample_dict[wc.sample]["R2"]]
+    end1 = lambda wc: sample_dict[wc.sample]["R1"],
+    end2 = lambda wc: sample_dict[wc.sample]["R2"]
   log:
-    "logs/qc/plot_qc_profiles_{sample}.logs"
+    "logs/qc/plot_qc_profiles_{sample}.log"
   output:
     "figures/quality_profiles/{sample}.png"
-  script:
-    "../scripts/dada2/plot_quality_profiles.R"
+  shell:
+    """Rscript ../scripts/dada2/plot_quality_profiles.R \
+      {output} --end1 {input.end1} --end2 {input.end2} \
+      --logfile {log}"""
 
 rule fastqc:
   input:
@@ -16,7 +19,7 @@ rule fastqc:
   params:
     threads = config["threads"]
   output:
-    html=expand("data/quality_control/fastqc/{sample}_fastqc.html", sample = allvalues),
+    html=expand("data/quality_control/fastqc/{sample}_fastqc.html", sample = allvalues), 
     zip=expand("data/quality_control/fastqc/{sample}_fastqc.zip", sample = allvalues)
   log:
     "logs/qc/fastqc.txt"

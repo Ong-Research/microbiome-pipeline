@@ -30,15 +30,11 @@ conda env create -n {env_name} --file dependencies.yml
 
 #### Install R packages
 
-This pipeline strongly depends on R package, therefore we utilized [renv](https://rstudio.github.io/renv/index.html) to set the right R package versions.
+To install the R packages used by this pipeline use:
 
-After `renv` is installed, utilize:
-
-```R
-renv::restore()
+```sh
+R CMD BATCH --vanilla ./install_r_packages.R
 ```
-
-to install all the R libraries used in the pipeline
 
 ### Run workflow
 

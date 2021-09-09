@@ -2,22 +2,22 @@ import os
 import os.path
 import pandas as pd
 
-configfile: "config.yaml"
+configfile: "config/config.yaml"
 
-# SampleTable = pd.read_table("samples2.tsv", index_col = 0)
-SampleTable = pd.read_table(config['sampletable'], index_col=0)
-sample_dict = SampleTable.to_dict('index')
+# sample_table = pd.read_table("all_samples2.tsv", index_col = 0)
+sample_table = pd.read_table(config['sample_table'], index_col = 1)
+sample_dict = sample_table.to_dict('index')
 
-SAMPLES = list(SampleTable.index)
-R1values = list(os.path.basename(sample_dict[sample]["R1"]) for sample in SAMPLES)
-R2values = list(os.path.basename(sample_dict[sample]["R2"]) for sample in SAMPLES)
-allvalues = R1values + R2values
-allvalues = list(value.replace(".fastq.gz","") for value in allvalues)
+all_samples = list(sample_table.index)
+end1_files = list(os.path.basename(sample_dict[sample]["end1"]) for sample in all_samples)
+end2_files = list(os.path.basename(sample_dict[sample]["end2"]) for sample in all_samples)
+all_files = end1_files + end2_files
+all_files = list(value.replace(".fastq.gz","") for value in all_files)
 
 
 JAVA_MEM_FRACTION=0.85
 CONDAENV ='envs'
-PAIRED_END= ('R2' in SampleTable.columns)
+PAIRED_END= ('R2' in sample_table.columns)
 FRACTIONS= ['R1']
 if PAIRED_END: FRACTIONS+= ['R2']
 
@@ -37,11 +37,13 @@ rule all:
 
 rule all_qc:
     input:
-      expand("figures/quality_profiles/{sample}.png", sample = SAMPLES),
-      "data/quality_control/multiqc/multiqc_report.html"
+      expand("workflow/report/quality_profiles/{sample}.png",
+        sample = all_samples),
+      "output/quality_control/multiqc/multiqc_report.html"
+
 rule clean_qc:
   shell:
-    "rm -fr data/quality_control"
+    "rm -fr output/quality_control"
 
 
 rule all_taxonomy_kraken:
@@ -67,6 +69,6 @@ rule clean_phyloseq:
     """rm -r data/phyloseq"""
 
 include: "rules/quality_control.smk"
-include: "rules/dada2.smk"
-include: "rules/taxonomy.smk"
-include: "rules/phyloseq.smk"
+# include: "rules/dada2.smk"
+# include: "rules/taxonomy.smk"
+# include: "rules/phyloseq.smk"

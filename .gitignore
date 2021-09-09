@@ -1,8 +1,8 @@
 .snakemake/
+workflow/report
 data/
-figures/
+output/
 logs/
-taxonomy/
 *tsv
 *qs
 extra.md

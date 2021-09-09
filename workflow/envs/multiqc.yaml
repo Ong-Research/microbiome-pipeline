@@ -1,0 +1,7 @@
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - PyYAML=5.4.1
+  - multiqc=1.10.1

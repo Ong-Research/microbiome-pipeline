@@ -24,7 +24,7 @@ if (is.null(arguments$outfile)) arguments$outfile <- "samples.tsv"
 
 stopifnot(dir.exists(arguments$input_dir))
 
-message("generating sample table from ", arguments$input_dir)
+message("generating sample table from ", arguments$input_dir, "/")
 
 library(magrittr, quietly = TRUE)
 library(tidyverse, quietly = TRUE)

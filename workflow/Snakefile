@@ -1,6 +1,7 @@
 import os
 import os.path
 import pandas as pd
+import numpy as np
 
 configfile: "config/config.yaml"
 
@@ -14,6 +15,15 @@ end2_files = list(os.path.basename(sample_dict[sample]["end2"]) for sample in al
 all_files = end1_files + end2_files
 all_files = list(value.replace(".fastq.gz","") for value in all_files)
 
+batches = np.unique(sample_table.batch).tolist()
+
+def get_batch_samples(sample_table, batch):
+  """
+  gets the samples on a single batch based on the sample table
+  """
+  out = sample_table[sample_table.batch == batch].index
+  
+  return list(out)
 
 JAVA_MEM_FRACTION=0.85
 CONDAENV ='envs'
@@ -69,6 +79,6 @@ rule clean_qc:
 #     """rm -r data/phyloseq"""
 
 include: "rules/quality_control.smk"
-# include: "rules/dada2.smk"
+include: "rules/dada2.smk"
 # include: "rules/taxonomy.smk"
 # include: "rules/phyloseq.smk"

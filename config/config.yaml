@@ -12,7 +12,7 @@ threads: 4
 
 # dada2 filter and trim
 filter_and_trim:
-  batch1:
+  dust_dec2018:
     truncQ: 12
     truncLen: [280, 250]
     trimLeft: 0
@@ -22,26 +22,26 @@ filter_and_trim:
     maxN: 0
     minQ: 0
     maxEE: [2, 2]
-  batch2:
-    truncQ: 14
+  dust_dec2019:
+    truncQ: 12
     truncLen: [280, 250]
-    trimLeft: 0
-    trimRight: 3
-    maxLen: Inf
-    minLen: 100
-    maxN: 0
-    minQ: 0
-    maxEE: [2, 2]
-  batch3:
-    truncQ: 23
-    truncLen: [280, 260]
     trimLeft: 0
     trimRight: 0
     maxLen: Inf
     minLen: 100
     maxN: 0
     minQ: 0
-    maxEE: [2, 3]
+    maxEE: [2, 2]
+  dust_jun2021:
+    truncQ: 22
+    truncLen: [280, 250]
+    trimLeft: 0
+    trimRight: 0
+    maxLen: Inf
+    minLen: 100
+    maxN: 0
+    minQ: 0
+    maxEE: [2, 2]
 
 # dada2 learn error rates
 error_rates:

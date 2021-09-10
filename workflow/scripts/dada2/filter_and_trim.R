@@ -12,7 +12,7 @@
 "Filter and trim
 
 Usage:
-filter_and_trim.R [<filter_end1> <filter_end2> <summary_file>] [<sample_name> --end1=<end1> --end2=<end2>] [--log=<logfile> --batch=<batch> --config=<cfile>]
+filter_and_trim.R [<filter_end1> <filter_end2> <summary_file>] [<sample_name> --end1=<end1> --end2=<end2>] [--batch=<batch> --log=<logfile> --config=<cfile>]
 filter_and_trim.R (-h|--help)
 filter_and_trim.R --version
 
@@ -20,7 +20,7 @@ Options:
 -h --help    show this screen
 --end1=<end1>    name of the R1 end fastq.gz file
 --end2=<end2>    name of the R2 end fastq.gz file
---log=<logfile>    name of the log file [default: filter_and_trim.log]
+--log=<logfile>    name of the log file [default: logs/filter_and_trim.log]
 --batch=<batch>    name of the batch if any to get the filter and trim parameters
 --config=<cfile>    name of the yaml file with the parameters [default: ./config/config.yaml]" -> doc
 
@@ -30,9 +30,26 @@ my_args <- commandArgs(trailingOnly = TRUE)
 
 arguments <- docopt::docopt(doc, args = my_args, version = "filter_and_trim V1")
 
+if (!interactive()) {
+  log_file <- file(arguments$log, open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+}
 
-log_file <- file(arguments$log, open = "wt")
-sink(log_file, type = "message")
+if (interactive()) {
+
+  arguments$batch <- "dust_dec2018"
+  arguments$sample_name <- "sample_20"
+  arguments$end1 <-
+    "data/dust_dec2018/190114_C75PR/203_S19_L001_R1_001.fastq.gz"
+  arguments$end2 <-
+    "data/dust_dec2018/190114_C75PR/203_S19_L001_R2_001.fastq.gz"
+
+  arguments$filter_end1 <-
+    "filtered_L001_R1_001.fastq.gz"
+  arguments$filter_end2 <-
+    "filtered_L001_R2_001.fastq.gz"
+}
 
 print(arguments)
 
@@ -49,12 +66,21 @@ stopifnot(file.exists(arguments$config),
   file.exists(arguments$end1), file.exists(arguments$end2))
 
 print(stringr::str_c(names(info), " : ", info, "\n"))
-config <- yaml::read_yaml(arguments$config)$filter_and_trim
+config <- yaml::read_yaml(arguments$config)
+config <- config[["filter_and_trim"]]
 print(config)
 
 if (!is.null(arguments$batch)) {
   stopifnot(arguments$batch %in% names(config))
   config <- config[[arguments$batch]]
+} else {
+  nms <- c("truncQ", "truncLen", "trimLeft", "trimRight",
+    "maxLen", "minLen", "maxN", "minQ", "maxEE")
+  if (any(names(config) %in% nms)) {
+    warning("will use first element instead")
+    config <- config[[1]]
+  }
+
 }
 
 fs::dir_create(unique(dirname(arguments$filter_end1)))
@@ -82,6 +108,7 @@ colnames(track_filt) <- c("raw", "filtered")
 track_filt %>%
   as.data.frame() %>%
   tibble::as_tibble(rownames = "samples") %>%
+  dplyr::mutate(
+    end1 = arguments$end1,
+    end2 = arguments$end2) %>%
   readr::write_tsv(arguments$summary_file)
-
-close(log_file)

@@ -23,28 +23,51 @@ Options:
 --cores=<cores>    number of CPUs for parallel processing [default: 4]" -> doc
 
 library(docopt)
+library(fs)
+
 
 my_args <- commandArgs(trailingOnly = TRUE)
 
 arguments <- docopt::docopt(doc, args = my_args, version = "error_rates V1")
 
-stopifnot(any(file.exists(arguments$filtered)))
-
-if (!is.null(arguments$config)) {
-  stopifnot(file.exists(arguments$config))
+if (!interactive()) {
+  fs::dir_create(dirname(arguments$log))
+  log_file <- file(arguments$log, open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
 }
 
-log_file <- file(arguments$log, open = "wt")
+if (interactive()) {
+
+  library(magrittr)
+  library(tidyverse)
+
+  arguments$error_rates <- "error_rate_matrix.qs"
+  arguments$plot_file <- "error_rates.png"
+  arguments$batch <- "dust_dec2019"
+  arguments$filtered <- readr::read_tsv("samples.tsv") %>%
+    filter(batch == arguments$batch) %>%
+    pull(key)
+  arguments$filtered <- as.character(glue::glue(
+    "output/dada2/filtered/{sample}_filtered_R1.fastq.gz",
+    sample = arguments$filtered))
+
+}
+
+stopifnot(any(file.exists(arguments$filtered)))
+stopifnot(file.exists(arguments$config))
+
 
 info <- Sys.info();
 print(stringr::str_c(names(info), " : ", info, "\n"))
+
+print(arguments)
 
 message("loading packages")
 library(dada2)
 library(ggplot2)
 library(qs)
 library(yaml)
-library(fs)
 
 config <- yaml::read_yaml(arguments$config)$error_rates
 print(config)
@@ -52,6 +75,13 @@ print(config)
 if (!is.null(arguments$batch)) {
   stopifnot(arguments$batch %in% names(config))
   config <- config[[arguments$batch]]
+} else {
+  nms <- c("learn_nbases")
+  if (any(names(config) %in% nms)) {
+    warning("will use first element instead")
+    config <- config[[1]]
+  }
+
 }
 
 print("computing error rates")
@@ -72,5 +102,3 @@ ggplot2::ggsave(
   width = 20,
   height = 20,
   units = "cm")
-
-close(log_file)

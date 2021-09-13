@@ -8,7 +8,7 @@
 sample_table: "samples.tsv"
 negcontroltable: "negcontrols.tsv"
 metadata: "meta.tsv"
-threads: 4
+threads: 32
 
 # dada2 filter and trim
 filter_and_trim:
@@ -45,22 +45,22 @@ filter_and_trim:
 
 # dada2 learn error rates
 error_rates:
-  batch1:
+  dust_dec2018:
     learn_nbases: 100e6
-  batch2:
+  dust_dec2019:
     learn_nbases: 100e6
-  batch3:
+  dust_jun2021:
     learn_nbases: 100e6
     
 # dada2 merge pairs
 merge_pairs:
-  batch1:
+  dust_dec2018:
     minOverlap: 50
     maxMismatch: 0
-  batch2:
+  dust_dec2019:
     minOverlap: 50
     maxMismatch: 0
-  batch3:
+  dust_jun2021:
     minOverlap: 50
     maxMismatch: 0    
 

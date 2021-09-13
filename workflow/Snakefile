@@ -7,6 +7,12 @@ configfile: "config/config.yaml"
 
 # sample_table = pd.read_table("all_samples2.tsv", index_col = 0)
 sample_table = pd.read_table(config['sample_table'], index_col = 1)
+
+sample_table = pd.read_table("samples.tsv", index_col = 1)
+sample_table = sample_table.assign(
+  merges = lambda df: "output/dada2/merge/" + df["batch"] + "/" +
+    df.index + "_asv.qs")
+
 sample_dict = sample_table.to_dict('index')
 
 all_samples = list(sample_table.index)
@@ -53,8 +59,9 @@ rule all_qc:
 
 rule clean_qc:
   shell:
-    "rm -fr output/quality_control"
+    "rm -fr output/quality_control workflow/report/quality_profiles"
 
+  
 
 # rule all_taxonomy_kraken:
 #   input:

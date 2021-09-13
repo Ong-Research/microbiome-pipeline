@@ -53,6 +53,9 @@ install.packages("gert")
 install.packages("knitr")
 install.packages("rmarkdown")
 install.packages("workflowr")
+install.packages("Cairo")
+install.packages("magick")
+
 
 # Bioconductor stuff
 install.packages("BiocManager")
@@ -73,3 +76,5 @@ BiocManager::install("DESeq2")
 BiocManager::install("DECIPHER")
 BiocManager::install("decontam")
 BiocManager::install("mixOmics")
+BiocManager::install("circlize")
+BiocManager::install("ComplexHeatmap")

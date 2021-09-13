@@ -1,30 +1,3 @@
-# An example collection of Snakemake rules imported in the main Snakefile.
-    
-# rule filter_and_trim:
-#   input:
-#     R1= sample_table.end1.values,
-#     R2= sample_table.end2.values
-#   output:
-#     R1 = expand("data/filtered/{sample}_R1.fastq.gz",sample=SAMPLES),
-#     R2 = expand("data/filtered/{sample}_R2.fastq.gz",sample=SAMPLES),
-#     nreads = temp("data/stats/Nreads_filtered.txt")
-#   params:
-#     samples = SAMPLES
-#   threads:
-#     config["threads"]
-#   # conda:
-#   #   "../envs/dada2.yaml"
-#   log:
-#     "logs/dada2/filter.txt"
-#   script:
-#     "../scripts/dada2/filter_and_trim.R"
-
-rule ft_test:
-  input:
-    expand("output/dada2/filtered/{sample}_filtered_R1.fastq.gz", sample = all_samples), 
-    expand("output/dada2/filtered/{sample}_filtered_R2.fastq.gz", sample = all_samples),
-    expand("output/dada2/summary/{sample}_summary_filtered.tsv", sample = all_samples)
-
 rule filter_and_trim_sample:
   input:
     end1 = lambda wc: sample_dict[wc.sample]["end1"],
@@ -45,88 +18,97 @@ rule filter_and_trim_sample:
       {params.sample_name} --end1={input.end1} --end2={input.end2} \
       --batch={params.batch} --log={log} --config={params.config}"""
 
-
-rule learn_error_rates_batch:
+rule learn_error_rates_batch_end:
   input:
-    end1 = lambda wc: expand("output/dada2/filtered/{sample}_filtered_R1.fastq.gz", sample = get_batch_samples(sample_table, wc.batch)),
-    end2 = lambda wc: expand("output/dada2/filtered/{sample}_filtered_R2.fastq.gz", sample = get_batch_samples(sample_table, wc.batch)),
+    filtered = lambda wc: expand("output/dada2/filtered/{sample}_filtered_{end}.fastq.gz", sample = get_batch_samples(sample_table, wc.batch), end = ["R1", "R2"])
   output:
-    end1 = "output/dada2/model/{batch}_error_rates_end1.qs",
-    end2 = "output/dada2/model/{batch}_error_rates_end2.qs",
-    fig_end1 = "workflow/report/model/{batch}_error_rates_end1.png",
-    fig_end2 = "workflow/report/model/{batch}_error_rates_end2.png"
+    mat = "output/dada2/model/{batch}_error_rates_{end}.qs",
+    plot = "workflow/report/model/{batch}_error_rates_{end}.png"
+  threads: config["threads"] / 2
+  params:
+    # sample_names = lambda wc: get_batch_samples(sample_table, wc.batch),
+    config = "config/config.yaml",
+    batch = "{batch}"
+  log:
+    "logs/dada2/02_learn_error_rates_{batch}_{end}.log"
+  shell:
+    """Rscript workflow/scripts/dada2/learn_error_rates.R \
+      --error_rates={output.mat} --plot_file={output.plot} \
+      {input.filtered} --log={log} --batch={params.batch} \
+      --config={params.config} --cores={threads}"""
+
+def get_filtered_files(wc, end):
+  """
+  gets the name of the filtered files based on a wildcard
+  """
+  out = "output/dada2/filtered/" + wc.sample + "_filtered_" + end + ".fastq.gz"
+  return out
+
+def get_error_matrix(wc, sample_table, end):
+  """
+  gets the error matrix based on a wildcard
+  """
+  sample_dict = sample_table.to_dict("index")
+  batch = sample_dict[wc.sample]["batch"]
+  out = "output/dada2/model/" + batch + "_error_rates_" + end + ".qs"
+  return out
+
+rule dereplicate_sample:
+  input:
+    filt_end1 = lambda wc: get_filtered_files(wc, "R1"),
+    filt_end2 = lambda wc: get_filtered_files(wc, "R2"),
+    mat_end1 = lambda wc: get_error_matrix(wc, sample_table, "R1"),
+    mat_end2 = lambda wc: get_error_matrix(wc, sample_table, "R2")
+  output:
+    merge = "output/dada2/merge/{batch}/{sample}_asv.qs"
+  params:
+    config = "config/config.yaml",
+    sample_name = lambda wc: wc.sample,
+    batch = lambda wc: sample_dict[wc.sample]["batch"]
+  threads: 1
+  log:
+    "logs/dada2/03_{batch}_{sample}_merge.txt"
+  shell:
+    """Rscript workflow/scripts/dada2/dereplicate_one_sample_pair.R \
+      {output.merge} {params.sample_name} \
+      {input.filt_end1} {input.filt_end2} \
+      --end1_err={input.mat_end1} --end2_err={input.mat_end2} \
+      --log={log} --batch={params.batch} --config={params.config}"""
+
+rule dereplicate_batch:
+  input:
+    derep = lambda wc: expand("output/dada2/merge/{batch}/{sample}_asv.qs", sample = get_batch_samples(sample_table, wc.batch), batch = wc.batch)
+  output:
+    asv = "output/dada2/asv_batch/{batch}_asv.qs",
+    summary = "output/dada2/asv_batch/{batch}_summary.qs"
+  params:
+    config = "config/config.yaml",
+    batch = lambda wc: wc.batch
+  threads: 1
+  log:
+    "logs/dada2/04_{batch}_derep_batch.log"
+  shell:
+    """Rscript workflow/scripts/dada2/gather_derep_seqtab.R \
+      {output.asv} {output.summary} {input.derep} \
+      --batch={params.batch} --log={log} --config={params.config}"""
+    
+rule remove_chimeras:
+  input:
+    asv = expand("output/dada2/asv_batch/{batch}_asv.qs", batch = batches)
+  output:
+    asv = "output/dada2/remove_chim/asv_mat_wo_chim.qs",
+    summary = "output/dada2/remove_chim/asv_mat_wo_chim_summary.qs",
+    matspy = "workflow/report/dada2qc/asv_matrix_wo_chim.png"
   threads: config["threads"]
   params:
-    sample_names = lambda wc: get_batch_samples(sample_table, wc.batch),
     config = "config/config.yaml"
   log:
-    "logs/dada2/02_learn_error_rates_{batch}.log"
+    "logs/dada2/05_remove_chimeras.log"
   shell:
-    """Rscript workflow/scripts/dada2/"""
-    
-
-      
-# rule learn_error_rates:
-#   input:
-#     R1 = rules.filter_and_trim.output.R1,
-#     R2 = rules.filter_and_trim.output.R2
-#   output:
-#     errR1 = "data/model/error_rates_R1.qs",
-#     errR2 = "data/model/error_rates_R2.qs",
-#     plotErr1 = "figures/model/error_rates_R1.png",
-#     plotErr2 = "figures/model/error_rates_R2.png"
-#   threads:
-#     config["threads"]
-#   # conda:
-#   #     "../envs/dada2.yaml"
-#   log:
-#     "logs/dada2/learnErrorRates.txt"
-#   script:
-#     "../scripts/dada2/learn_error_rates.R"
-
-# rule dereplicate_single:
-#   input:
-#     R1 = "data/filtered/{sample}_R1.fastq.gz",
-#     R2 = "data/filtered/{sample}_R2.fastq.gz",
-#     errR1 = rules.learn_error_rates.output.errR1,
-#     errR2 = rules.learn_error_rates.output.errR2
-#   output:
-#     merge = temp("data/mergers/{sample}_asv.qs")
-#   log:
-#     "logs/dada2/{sample}_merge.txt"
-#   script:
-#     "../scripts/dada2/dereplicate_one_sample_pair.R"
-
-# rule dereplicate:
-#   input:
-#     derep = expand("data/mergers/{sample}_asv.qs", sample = SAMPLES)
-#   output:
-#     seqtab = temp("data/asv/seqtab_with_chimeras.qs"),
-#     nreads = temp("data/stats/Nreads_dereplicated.txt")
-#   params:
-#     samples = SAMPLES
-#   threads:
-#     config["threads"]
-#   log:
-#     "logs/dada2/dereplicate_samples.txt"
-#   script:
-#     "../scripts/dada2/gather_derep_seqtab.R"
-
-
-# rule remove_chimeras:
-#   input:
-#     seqtab = rules.dereplicate.output.seqtab
-#   output:
-#     asvs = temp("data/asv/seqtab_nochimeras.qs"),
-#     nreads = "data/stats/Nreads_chimera_removed.txt"
-#   threads:
-#     config["threads"]
-#   # conda:
-#   #       "../envs/dada2.yaml"
-#   log:
-#     "logs/dada2/remove_chimeras.txt"
-#   script:
-#     "../scripts/dada2/remove_chimeras.R"
+    """Rscript workflow/scripts/dada2/remove_chimeras.R \
+    {output.asv} {output.summary} {output.matspy} \
+    {input.asv} \
+    --log={log} --config={params.config} --cores={threads}"""
 
 # rule filter_asvs:
 #   input:

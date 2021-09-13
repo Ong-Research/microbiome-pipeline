@@ -22,7 +22,7 @@
 "Dereplicate one sample pair
 
 Usage:
-dereplicate_one_sample_pair.R  [<sample_merge_file>] [<sample_name> <end1_file> <end2_file> --end1_err=<end1_err> --end2_err=<end2_err>] [--log=<logfile> --batch=<batch> --config=<cfile>]
+dereplicate_one_sample_pair.R [<sample_merge_file>] [<sample_name> <end1_file> <end2_file> --end1_err=<end1_err> --end2_err=<end2_err>] [--log=<logfile> --batch=<batch> --config=<cfile>]
 dereplicate_one_sample_pair.R (-h|--help)
 dereplicate_one_sample_pair.R --version
 
@@ -40,6 +40,28 @@ my_args <- commandArgs(trailingOnly = TRUE)
 arguments <- docopt::docopt(doc, args = my_args,
   version = "dereplicate one sample V1")
 
+if (!interactive()) {
+  log_file <- file(arguments$log, open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+}
+
+if (interactive()) {
+
+  arguments$end1_file <-
+    "output/dada2/filtered/sample_545_filtered_R1.fastq.gz"
+  arguments$end2_file <-
+    "output/dada2/filtered/sample_545_filtered_R2.fastq.gz"
+  arguments$end1_err <-
+    "output/dada2/model/dust_jun2021_error_rates_R1.qs"
+  arguments$end2_err <-
+    "output/dada2/model/dust_jun2021_error_rates_R2.qs"
+  arguments$batch <- "dust_jun2021"
+  arguments$sample_name <- "sample_545"
+
+}
+
+
 stopifnot(
   file.exists(arguments$end1_file),
   file.exists(arguments$end2_file),
@@ -47,12 +69,11 @@ stopifnot(
   file.exists(arguments$end2_err))
 
 if (!is.null(arguments$config)) stopifnot(file.exists(arguments$config))
-  
-log_file <- file(arguments$log, open = "wt")
-sink(log_file)
+ 
 
 info <- Sys.info();
 
+print(arguments)
 print(stringr::str_c(names(info), " : ", info, "\n"))
 
 message("loading packages")
@@ -99,13 +120,16 @@ config <- yaml::read_yaml(arguments$config)$merge_pairs
 if (!is.null(arguments$batch)) {
   stopifnot(arguments$batch %in% names(config))
   config <- config[[arguments$batch]]
+} else {
+  nms <- c("minOverlap", "maxMismatch")
+  if (any(names(config) %in% nms)) {
+    warning("will use first element instead")
+    config <- config[[1]]
+  }
 }
-
 
 merge <- dereplicate_merge(filter_fwd, filter_bwd, err_fwd, err_bwd,
   min_overlap = as.numeric(config[["minOverlap"]]),
   max_mismatch = as.numeric(config[["maxMismatch"]]))
 
 qs::qsave(merge, arguments$sample_merge_file)
-
-close(log_file)

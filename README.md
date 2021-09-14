@@ -47,9 +47,9 @@ Will generate the `samples.tsv` file that contains 4 columns:
 
 separated by a tab space. Then, we can use different commands in the pipeline, for example considering 16 threads:
 
-* `snakemake -j16` runs everything
-* `snakemake -j16 all_qc` plots quality profiles, and build a `multiqc` report
-* `snakemake -j16 dada2` computes the ASV matrix from the different batches
+* `snakemake -j{cores}` runs everything
+* `snakemake -j{cores} all_qc` plots quality profiles, and build a `multiqc` report
+* `snakemake -j{cores} dada2` computes the ASV matrix from the different batches
 * `snakemake -j{cores} all_taxonomy_kraken` to labels the ASV sequences with [kraken2](https://ccb.jhu.edu/software/kraken2/). Databases need to be downloaded from <https://benlangmead.github.io/aws-indexes/k2>
 * `snakemake -j{cores} all_phyloseq` to perform the generate a `phyloseq` object, align sequences and compute the alpha / beta diversities. This step is not stable yet, but alternatively a good ending point could be `snakemake -j{cores} init_phyloseq`
 

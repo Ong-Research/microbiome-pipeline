@@ -1,38 +1,91 @@
-# this script filters the ASV matrix after removing chimeras
-#
-# it does the following stuff:
-# - 
-source("renv/activate.R")
+#!/usr/local/bin/Rscript
+
+#' Subtract p% of the negative controls reads of the ASV matrix
+#' @author rwelch2
+
+"Filters the low quality ASVs
+
+Usage:
+filter_asvs.R [<asv_matrix_qc> <seqlength_fig> <abundance_fig>] [<asv_matrix_file> <negcontrol_file>] [--lysis --log=<logfile> --config=<cfile> --cores=<cores>]
+filter_asvs.R (-h|--help)
+filter_asvs.R --version
+
+Options:
+-h --help    show this screen
+--log=<logfile>    name of the log file [default: filter_and_trim.log]
+--config=<cfile>    name of the yaml file with the parameters [default: ./config/config.yaml]
+--cores=<cores>    number of CPUs for parallel processing [default: 24]" -> doc
+
+library(docopt)
+
+my_args <- commandArgs(trailingOnly = TRUE)
+
+arguments <- docopt::docopt(doc, args = my_args,
+  version = "filter ASVs V1")
+
+if (!interactive()) {
+  fs::dir_create(dirname(arguments$log))
+  log_file <- file(arguments$log, open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+}
+
+if (interactive()) {
+
+  arguments$asv_matrix_qc <- "asv.qs"
+  arguments$seqlength_fig <- "sl.png"
+  arguments$abundance_fig <- "sa.png"
+  arguments$asv_matrix_file <- "output/dada2/remove_chim/asv_mat_wo_chim.qs"
+  arguments$negcontrol_file <- "data/negcontrols.qs"
+
+}
+
+
+message("arguments")
+print(arguments)
+
 info <- Sys.info();
-
-sink(snakemake@log[[1]])
-
-message(stringr::str_c(names(info), " : ", info, "\n"))
 print(stringr::str_c(names(info), " : ", info, "\n"))
+
 
 message("loading packages")
 library(magrittr)
 library(tidyverse)
 library(dada2)
 library(qs)
+library(yaml)
 
-message("starting with asvs in ", snakemake@input[["seqtab"]])
+stopifnot(
+  file.exists(arguments$asv_matrix_file),
+  file.exists(arguments$config),
+  file.exists(arguments$negcontrol_file))
 
-seqtab <- qs::qread(snakemake@input[["seqtab"]])
+message("starting with asvs in ", arguments$asv_matrix_file)
+
+seqtab <- qs::qread(arguments$asv_matrix_file)
+config <- yaml::read_yaml(arguments$config)[["qc_parameters"]]
 
 message("filtering samples by negative controls")
-message("using neg. control file ", snakemake@input[["negcontrol"]])
-message("removing counts >= ", snakemake@config[["negctrl_prop"]],
+message("using neg. control file ", arguments$negcontrol_file)
+message("removing counts >= ", config[["negctrl_prop"]],
   " sum(neg_controls)")
-neg_controls <- readr::read_tsv(snakemake@input[["negcontrol"]])
+
+neg_controls <- qs::qread(arguments$negcontrol_file)
+
+if (arguments$lysis) {
+
+  neg_controls %<>%
+    dplyr::mutate(
+      kits = map2(kits, lysis, c))
+
+}
 
 neg_controls %<>%
-  tidyr::nest(negs = c(neg_control))
+  dplyr::select(batch, key, kits)
 
 subtract_neg_control <- function(name, neg_controls, seqtab, prop) {
 
-  negs <- neg_controls %>%
-    dplyr::pull(neg_control)
+  negs <- neg_controls
 
   negs <- negs[negs %in% rownames(seqtab)]
   out_vec <- seqtab[name, ]
@@ -57,9 +110,9 @@ subtract_neg_control <- function(name, neg_controls, seqtab, prop) {
 }
 
 neg_controls %<>%
-  dplyr::mutate(sample_vec = purrr::map2(name, negs,
+  dplyr::mutate(sample_vec = purrr::map2(key, kits,
     safely(subtract_neg_control),
-    seqtab, snakemake@config[["negctrl_prop"]]))
+    seqtab, config[["negctrl_prop"]]))
 
 to_remove <- dplyr::filter(neg_controls,
   purrr::map_lgl(sample_vec, ~ !is.null(.$error)))
@@ -75,7 +128,7 @@ neg_controls %<>%
     sample_vec = purrr::map(sample_vec, "result"))
 
 sample_names <- neg_controls %>%
-  dplyr::pull(name)
+  dplyr::pull(key)
 
 seqtab_samples <- purrr::reduce(
   dplyr::pull(neg_controls, sample_vec), dplyr::bind_rows)
@@ -84,7 +137,7 @@ seqtab_samples %<>%
   set_rownames(sample_names)
 
 seqtab_nc <- seqtab[! rownames(seqtab) %in% sample_names, ]
-seqtab_new <- rbind(seqtab_samples, seqtab_nc)
+seqtab_new <- floor(rbind(seqtab_samples, seqtab_nc))
 
 # Length of sequences
 message("filtering sequences by length")
@@ -101,12 +154,13 @@ l_hist <- l_hist %>%
     labs(title = "Sequence Lengths by SEQ Count") +
     theme_bw() +
     theme(
+      axis.text = element_text(size = 6),
       axis.text.x = element_text(angle = 90, hjust = 1,
         vjust = 0.5, size = 10),
       axis.text.y = element_text(size = 10))
 
 ggsave(
-  filename = snakemake@output[["plot_seqlength"]],
+  filename = arguments$seqlength_fig,
   plot = l_hist,
   width = 8, height = 4, units = "in")
 
@@ -126,17 +180,18 @@ table2 <- table2 %>%
     labs(title = "Sequence Lengths by SEQ Abundance") +
     theme_bw() +
     theme(
+      axis.text = element_text(size = 6),
       axis.text.x = element_text(angle = 90, hjust = 1,
         vjust = 0.5, size = 10),
       axis.text.y = element_text(size = 10))
 
 ggsave(
-  filename = snakemake@output[["plot_seqabundance"]],
+  filename = arguments$abundance_fig,
   plot = table2,
   width = 8, height = 4, units = "in")
 
 
-max_diff <- snakemake@config[['max_length_variation']]
+max_diff <- config[["max_length_variation"]]
 
 message("most common length: ", most_common_length)
 message("removing sequences outside range ",
@@ -148,7 +203,7 @@ seqtab_new <- seqtab_new[, right_length]
 
 
 total_abundance <- sum(colSums(seqtab_new))
-min_reads_per_asv <- ceiling(snakemake@config[["low_abundance_perc"]] / 100 *
+min_reads_per_asv <- ceiling(config[["low_abundance_perc"]] / 100 *
   total_abundance)
 
 seqtab_abundance <- colSums(seqtab_new)
@@ -158,5 +213,5 @@ message("in total ", sum(seqtab_abundance < min_reads_per_asv))
 seqtab_new <- seqtab_new[, seqtab_abundance >= min_reads_per_asv]
 
 
-message("saving files in ", snakemake@output[["seqtab_filt"]])
-qs::qsave(seqtab_new, snakemake@output[["seqtab_filt"]])
+message("saving files in ", arguments$asv_matrix_qc)
+qs::qsave(seqtab_new, arguments$asv_matrix_qc)

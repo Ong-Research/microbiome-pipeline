@@ -8,3 +8,5 @@ logs/
 extra.md
 .bashrc
 prepare_negcontrols_dust.R
+workflow/rules/extra_dust.smk
+*png

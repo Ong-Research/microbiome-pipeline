@@ -8,6 +8,8 @@ install.packages("lintr")
 install.packages("languageserver")
 install.packages("usethis")
 install.packages("devtools")
+install.packages("here")
+install.packages("snakecase")
 
 # tidyverse and use
 install.packages("magrittr")

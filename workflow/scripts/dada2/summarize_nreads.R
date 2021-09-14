@@ -1,26 +1,70 @@
-# Summarize numbers of reads per step, makes some plots
-source("renv/activate.R")
+"Summarized the # or reads per processing step
 
-sink(snakemake@log[[1]])
+Usage:
+summarize_nreads.R [<nreads_file> <nreads_fig> <preads_fig>] [<filt_summary_file> <derep_summary_file> <final_asv_mat>] [--log=<logfile>]
+summarize_nreads.R (-h|--help)
+summarize_nreads.R --version
+
+Options:
+-h --help    show this screen
+--log=<logfile>    name of the log file [default: filter_and_trim.log]" -> doc
+
+library(docopt)
+
+my_args <- commandArgs(trailingOnly = TRUE)
+
+arguments <- docopt::docopt(doc, args = my_args,
+  version = "summarize # reads V1")
+
+if (!interactive()) {
+  fs::dir_create(dirname(arguments$log))
+  log_file <- file(arguments$log, open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+}
+
+if (interactive()) {
+
+  arguments$filt_summary_file <-
+    "output/dada2/filtered/all_sample_summary.tsv"
+  arguments$derep_summary_file <-
+    "output/dada2/asv_batch/all_sample_summary.tsv"
+  arguments$final_asv_mat <-
+    "output/dada2/after_qc/asv_mat_wo_chim.qs"
+
+  arguments$nreads_file <-
+    "output/dada2/stats/Nreads_dada2.txt"
+  arguments$nreads_fig <-
+    "workflow/report/dada2qc/dada2steps_vs_abundance.png"
+  arguments$preads_fig <-
+    "workflow/report/dada2qc/dada2steps_vs_relabundance.png"
+
+}
+
+# Summarize numbers of reads per step, makes some plots
+
 info <- Sys.info();
 
 message(stringr::str_c(names(info), " : ", info, "\n"))
-print(stringr::str_c(names(info), " : ", info, "\n"))
 
 message("loading packages")
 library(magrittr)
 library(tidyverse)
+library(vroom)
 library(qs)
 
 stats <- list()
-stats[[1]] <- readr::read_tsv(snakemake@input[["nreads_filtered"]])
-stats[[2]] <- readr::read_tsv(snakemake@input[["nreads_dereplicated"]])
-stats[[3]] <- readr::read_tsv(snakemake@input[["nreads_chim_removed"]])
+stats[[1]] <- readr::read_tsv(arguments$filt_summary_file) %>%
+  select(-end1, -end2)
+stats[[2]] <- readr::read_tsv(arguments$derep_summary_file)
+stats[[3]] <- qs::qread(arguments$final_asv_mat) %>%
+  rowSums() %>%
+  tibble::tibble(samples = names(.), nreads = .)
 
 stats <- purrr::reduce(stats, purrr::partial(dplyr::inner_join, by = "samples"))
 
 stats %>%
-  readr::write_tsv(snakemake@output[["nreads"]])
+  readr::write_tsv(arguments$nreads_file)
 
 message("making figures")
 
@@ -31,7 +75,7 @@ order_steps <- stats %>%
 rel_stats <- stats %>%
   dplyr::mutate(
     dplyr::across(
-      -samples, list( ~ . / raw), .names = "{.col}"))
+      -samples, list(~ . / raw), .names = "{.col}"))
 
 make_plot <- function(stats, summary_fun = median, ...) {
 
@@ -64,15 +108,17 @@ make_plot <- function(stats, summary_fun = median, ...) {
 }
 
 ggsave(
-  filename = snakemake@output[["fig_step"]],
-  plot = make_plot(stats) + labs("# reads"),
+  filename = arguments$nreads_fig,
+  plot = make_plot(stats) + labs("# reads") +
+   scale_y_continuous(labels = scales::comma_format(1)),
   width = 6,
   height = 4,
   units = "in")
 
 ggsave(
-  filename = snakemake@output[["fig_step_rel"]],
-  plot = make_plot(rel_stats) + labs(y = "relative change"),
+  filename = arguments$preads_fig,
+  plot = make_plot(rel_stats) + labs(y = "relative change") +
+    scale_y_continuous(labels = scales::percent_format(1)),
   width = 6,
   height = 4,
   units = "in")

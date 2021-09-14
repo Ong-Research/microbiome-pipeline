@@ -80,7 +80,7 @@ rule dereplicate_batch:
     derep = lambda wc: expand("output/dada2/merge/{batch}/{sample}_asv.qs", sample = get_batch_samples(sample_table, wc.batch), batch = wc.batch)
   output:
     asv = "output/dada2/asv_batch/{batch}_asv.qs",
-    summary = "output/dada2/asv_batch/{batch}_summary.qs"
+    summary = "output/dada2/asv_batch/{batch}_summary.tsv"
   params:
     config = "config/config.yaml",
     batch = lambda wc: wc.batch
@@ -110,29 +110,66 @@ rule remove_chimeras:
     {input.asv} \
     --log={log} --config={params.config} --cores={threads}"""
 
-# rule filter_asvs:
-#   input:
-#     seqtab = rules.remove_chimeras.output.asvs,
-#     negcontrol = config["negcontroltable"]
-#   output:
-#     plot_seqlength = "figures/qc/nasvs_by_seqlength.png",
-#     plot_seqabundance = "figures/qc/nasvs_by_seqabundance.png",
-#     seqtab_filt = "data/asv/seqtab_nochimeras_qc.qs"
-#   log:
-#     "logs/dada2/filter_qc.txt"
-#   script:
-#     "../scripts/dada2/filter_asvs.R"
+rule filter_asvs:
+  input:
+    seqtab = "output/dada2/remove_chim/asv_mat_wo_chim.qs",
+    negcontrol = "data/negcontrols.qs"
+  output:
+    plot_seqlength = "workflow/report/dada2qc/nasvs_by_seqlength.png",
+    plot_seqabundance = "workflow/report/dada2qc/nasvs_by_seqabundance.png",
+    seqtab_filt = "output/dada2/after_qc/asv_mat_wo_chim.qs"
+  params:
+    config = "config/config.yaml"
+  log:
+    "logs/dada2/06_filter_qc.log"
+  threads: 1
+  shell:
+    """Rscript workflow/scripts/dada2/filter_asvs.R \
+      {output.seqtab_filt} \
+      {output.plot_seqlength} {output.plot_seqabundance} \
+      {input.seqtab} {input.negcontrol} \
+      --log={log} --config={params.config} --cores={threads}"""
 
-# rule stats:
-#   input:
-#     nreads_filtered = "data/stats/Nreads_filtered.txt",
-#     nreads_dereplicated = "data/stats/Nreads_dereplicated.txt",
-#     nreads_chim_removed = "data/stats/Nreads_chimera_removed.txt"
-#   output:
-#     nreads = "data/stats/Nreads_dada2.txt",
-#     fig_step = "figures/qc/dada2steps_vs_abundance.png",
-#     fig_step_rel = "figures/qc/dada2steps_vs_relabundance.png",
-#   log:
-#     "logs/dada2/summarize_stats.txt"
-#   script:
-#     "../scripts/dada2/summarize_nreads.R"
+rule collect_filtered:
+  input:
+    filt = expand("output/dada2/summary/{sample}_summary_filtered.tsv", sample = all_samples)
+  output:
+    filt = "output/dada2/filtered/all_sample_summary.tsv"
+  log:
+    "logs/dada2/07_collect_filtered.log"
+  threads: 1
+  shell:
+    """Rscript workflow/scripts/dada2/collect_tsv_files.R \
+      {output.filt} {input.filt} \
+      --log={log}"""
+
+rule collect_merged:
+  input:
+    merg = expand("output/dada2/asv_batch/{batch}_summary.tsv",
+      batch = batches)
+  output:
+    merg = "output/dada2/asv_batch/all_sample_summary.tsv"
+  log:
+    "logs/dada2/07_collect_derep.log"
+  threads: 1
+  shell:
+    """Rscript workflow/scripts/dada2/collect_tsv_files.R \
+      {output.merg} {input.merg} \
+      --log={log}"""
+
+rule collect_summary:
+  input:
+    filt = "output/dada2/filtered/all_sample_summary.tsv",
+    merg = "output/dada2/asv_batch/all_sample_summary.tsv",
+    asvs = "output/dada2/after_qc/asv_mat_wo_chim.qs"
+  output:
+    nreads = "output/dada2/stats/Nreads_dada2.txt",
+    fig_step = "workflow/report/dada2qc/dada2steps_vs_abundance.png",
+    fig_step_rel = "workflow/report/dada2qc/dada2steps_vs_relabundance.png"
+  log:
+    "logs/dada2/08_summarize_stats.txt"
+  shell:
+    """Rscript workflow/scripts/dada2/summarize_nreads.R \
+      {output.nreads} {output.fig_step} {output.fig_step_rel} \
+      {input.filt} {input.merg} {input.asvs} \
+      --log={log}"""

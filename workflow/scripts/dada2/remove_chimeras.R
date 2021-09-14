@@ -62,7 +62,9 @@ stopifnot(any(file.exists(arguments$asv_file)))
 
 if (!is.null(arguments$config)) stopifnot(file.exists(arguments$config))
 
-config <- yaml::read_yaml(arguments$config)$remove_chimeras
+config <- yaml::read_yaml(arguments$config)
+sample_table <- readr::read_tsv(config$sample)
+config <- config$remove_chimeras
 
 seqtab_list <- purrr::map(arguments$asv_file, qs::qread)
 
@@ -97,16 +99,28 @@ out %>%
 
 fs::dir_create(dirname(arguments$fig_file))
 
-outmat <- seqtab[, seq_len(1e4)]
+outmat <- seqtab[, seq_len(min(1e4, ncol(seqtab)))]
 outmat <- ifelse(outmat > 0, 1, 0)
 cols <- structure(c("black", "white"), names = c("1", "0"))
 
+annot <- ComplexHeatmap::rowAnnotation(
+  df = sample_table %>%
+    select(batch, key) %>%
+    as.data.frame() %>%
+    column_to_rownames("key"),
+  annotation_legend_param = list(
+    batch = list(direction = "horizontal")))
+
 png(filename = arguments$fig_file, width = 10, height = 8, units = "in",
   res = 1200)
-ComplexHeatmap::Heatmap(outmat,
+hm <- ComplexHeatmap::Heatmap(outmat,
+  left_annotation = annot,
   col = cols, name = "a", show_row_dend = FALSE, show_row_names = FALSE,
   show_column_dend = FALSE, show_column_names = FALSE,
   cluster_columns = FALSE, cluster_rows = FALSE,
   show_heatmap_legend = FALSE, use_raster = TRUE,
-  column_title = "Top 10K ASVs")
+  column_title = "Top 10K ASVs",
+  heatmap_legend_param = list(direction = "horizontal"))
+draw(hm, annotation_legend_side = "top", heatmap_legend_side = "top",
+  merge_legend = TRUE)
 dev.off()

@@ -84,8 +84,16 @@ rule dada2:
     "workflow/report/dada2qc/dada2steps_vs_relabundance.png"
 
 rule clean_dada2:
-  "rm -fr output/dada2 output/dada2"
+  shell:
+    "rm -fr output/dada2 workflow/report/dada2qc workflow/report/model"
 
+rule taxonomy:
+  input:
+    "output/taxa/fasta/asv_sequences.fa"
+
+rule clean_taxonomy:
+  shell:
+    "rm -fr output/taxa"
 
 # rule all_taxonomy_kraken:
 #   input:
@@ -112,5 +120,6 @@ rule clean_dada2:
 include: "rules/extra_dust.smk"
 include: "rules/quality_control.smk"
 include: "rules/dada2.smk"
-# include: "rules/taxonomy.smk"
+include: "rules/taxonomy.smk"
+# include: "rules/qiime_quicktree.smk"
 # include: "rules/phyloseq.smk"

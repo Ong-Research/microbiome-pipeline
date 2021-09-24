@@ -99,10 +99,16 @@ rule clean_taxonomy:
   shell:
     "rm -fr output/taxa"
 
-# rule all_taxonomy_kraken:
-#   input:
-#     "data/fasta/asv_sequences.fa",
-#     "data/taxonomy/kraken_minikraken2_labels.qs"
+rule phylotree:
+  input:
+    "output/phylotree/aligned_sequences.qza",
+    "output/phylotree/masked_aligned_sequences.qza",
+    "output/phylotree/unrooted_tree.qza",
+    "output/phylotree/rooted_tree.qza"
+
+rule clean_phylotree:
+  shell:
+    "rm -fr output/phylotree"
     
 # rule all_phyloseq:
 #   input:
@@ -125,5 +131,5 @@ include: "rules/extra_dust.smk"
 include: "rules/quality_control.smk"
 include: "rules/dada2.smk"
 include: "rules/taxonomy.smk"
-# include: "rules/qiime_quicktree.smk"
-# include: "rules/phyloseq.smk"
+include: "rules/phylo_tree.smk"
+# include: "rules/mia.smk"

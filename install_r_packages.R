@@ -50,6 +50,9 @@ install.packages("RcppEigen")
 # scripting
 install.packages("docopt")
 
+# extra
+install.packages("taxizedb")
+
 # documentation
 install.packages("gert")
 install.packages("knitr")
@@ -57,7 +60,6 @@ install.packages("rmarkdown")
 install.packages("workflowr")
 install.packages("Cairo")
 install.packages("magick")
-
 
 # Bioconductor stuff
 install.packages("BiocManager")

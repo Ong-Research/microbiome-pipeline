@@ -1,28 +1,58 @@
+#!/usr/local/bin/Rscript
 
-source("renv/activate.R")
+#' Parses kraken2 results into a readable table
+#' @param kraken results computed by kraken2
+#' @author rwelch
 
-sink(snakemake@log[[1]])
+"Parse kraken2 results
+
+Usage:
+parase_kraken.R [<taxa_table> <taxa_summary>] [<kraken_file>] [--log=<logfile> --cores=<cores>]
+parase_kraken.R (-h|--help)
+parase_kraken.R --version
+
+Options:
+--log=<logfile>    name of the log file [default: ./parse_kraken.log]
+--cores=<cores>    number of parallel CPUs [default: 8]" -> doc
+
+library(docopt)
+
+my_args <- commandArgs(trailingOnly = TRUE)
+
+arguments <- docopt::docopt(doc, args = my_args,
+  version = "parse kraken2 results V1")
+
+if (!interactive()) {
+  log_file <- file(arguments$log, open = "wt")
+  sink(log_file, type = "output")
+  sink(log_file, type = "message")
+}
+
+if (interactive()) {
+
+  arguments$taxa_table <- "output"
+  arguments$kraken_file <- "output/taxa/kraken/minikraken/kraken_results.out"
+
+}
+
+
 info <- Sys.info();
-
-message(stringr::str_c(names(info), " : ", info, "\n"))
 print(stringr::str_c(names(info), " : ", info, "\n"))
 
 message("loading packages")
 library(magrittr)
 library(tidyverse)
 library(taxizedb)
-library(furrr)
-library(future)
+library(BiocParallel)
 
-future::plan(multiprocess, workers = snakemake@threads)
+bpp <- BiocParallel::MulticoreParam(workers = as.numeric(arguments$cores))
 
 message("getting ncbi database")
 ncbi_db <- taxizedb::db_download_ncbi()
 taxa <- c("phylum", "class", "order", "family", "genus", "species")
 
 message("reading labels from kraken")
-kraken <- snakemake@input[["kraken"]]
-kraken <- readr::read_tsv(kraken, col_names = FALSE)
+kraken <- readr::read_tsv(arguments$kraken_file, col_names = FALSE)
 
 get_taxa_from_id <- function(results) {
   query <- taxizedb::classification(results$id, db = "ncbi")
@@ -37,23 +67,24 @@ get_taxa_from_id <- function(results) {
 
 clean_id_taxa <- function(id_taxa, taxa) {
 
-  `%<>%` <- magrittr::`%<>%`
   name <- NULL
 
   if (is.data.frame(id_taxa)) {
     id_taxa %<>%
       dplyr::filter(rank %in% taxa) %>%
       dplyr::select(-id)
-    id_taxa %<>% tidyr::spread(rank, name)
-	}
+    id_taxa %<>%
+      tidyr::pivot_wider(names_from = rank, values_from = name)
+  }
   id_taxa
 }
 
-clean_id_taxa_wrap <- function(labels, taxa) {
+clean_id_taxa_wrap <- function(labels, taxa, bpp) {
 
   labels %<>%
     dplyr::mutate(
-      id_taxa_clean = furrr::future_map(id_taxa, clean_id_taxa, taxa))
+      id_taxa_clean = BiocParallel::bplapply(id_taxa, clean_id_taxa, taxa,
+        BPPARAM = bpp))
 
   labels %>%
     dplyr::select(asv, id_taxa_clean) %>%
@@ -62,12 +93,12 @@ clean_id_taxa_wrap <- function(labels, taxa) {
 
 }
 
-
 message("parsing labels")
 kraken %<>%
   rlang::set_names(c("rank", "asv", "id", "seq_length", "id_bp"))
+  
 labels <- get_taxa_from_id(kraken)
-labels <- clean_id_taxa_wrap(labels, taxa)
+labels <- clean_id_taxa_wrap(labels, taxa, bpp)
 
 taxa_summary <- labels %>%
   tidyr::pivot_longer(-asv, names_to = "taxa", values_to = "value") %>%
@@ -82,6 +113,11 @@ taxa_summary <- labels %>%
 
 message("saving results")
 
-labels %>% qs::qsave(snakemake@output[["taxa_qs"]])
-labels %>% readr::write_tsv(snakemake@output[["taxa_tsv"]])
-taxa_summary %>% readr::write_tsv(snakemake@output[["summary"]])
+fs::dir_create(dirname(arguments$taxa_table))
+fs::dir_create(dirname(arguments$taxa_summary))
+
+labels %>%
+  qs::qsave(arguments$taxa_table)
+  
+taxa_summary %>%
+  readr::write_tsv(arguments$taxa_summary)

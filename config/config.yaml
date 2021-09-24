@@ -82,21 +82,25 @@ remove_chimeras:
 qc_parameters:
   negctrl_prop: 0.5
   max_length_variation: 50
-  low_abundance_perc: 0.0001
+  low_abundance_perc: 0.0001 
 
-# can be downloaded from https://benlangmead.github.io/aws-indexes/k2
-kraken_dbs: 
-  minikraken2: "taxonomy/minikraken2_v2_8GB_201904_UPDATE/"
-  greengenes: "taxonomy/16S_Greengenes_k2db"
-  # rdp: "taxonomy/16S_RDP11.5_20200326"
-  # silva: "taxonomy/16S_Silva132_20200326"
+# downloaded from https://benlangmead.github.io/aws-indexes/k2
+# the first three contain only bacteria, the last one contains viral, human, archea too
+kraken_dbs:
+  {
+    greengenes: "data/kraken_dbs/16S_Greengenes_k2db",
+    silva: "data/kraken_dbs/16S_SILVA138_k2db",
+    rdp: "data/kraken_dbs/16S_RDP_k2db",
+    minikraken: "data/kraken_dbs/minikraken2_v2_8GB_201904_UPDATE"
+  }
 
 # According to this issue:
 # https://github.com/DerrickWood/kraken2/issues/167  
 # For general purposes, 0.05 or 0.1 for general purposes.
 # If the classification of ASVs / OTUs of reads < 10 is important, then use
 # something higher, e.g. 0.5 
-confidence: 0.01
+# more details: https://github.com/DerrickWood/kraken2/wiki/Manual#output-formats
+kraken_confidence: 0.01
 
 # phyloseq 
 # any of c("bray", "fJaccard", "euclidean",

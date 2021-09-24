@@ -89,7 +89,11 @@ rule clean_dada2:
 
 rule taxonomy:
   input:
-    "output/taxa/fasta/asv_sequences.fa"
+    "output/taxa/fasta/asv_sequences.fa",
+    expand("output/taxa/kraken/{ref}/kraken_results.out",
+      ref = ["greengenes", "silva", "rdp", "minikraken"]),
+    expand("output/taxa/kraken/{ref}/kraken_taxatable.qs",
+      ref = ["greengenes", "silva", "rdp", "minikraken"])
 
 rule clean_taxonomy:
   shell:

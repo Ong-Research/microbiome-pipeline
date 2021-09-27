@@ -62,20 +62,24 @@ separated by a tab space. Then, we can use different commands in the pipeline, f
 
 ### dada2
 
-Callahan, B., McMurdie, P., Rosen, M. et al. DADA2: High-resolution sample inference from Illumina amplicon data. Nat Methods 13, 581–583 (2016). https://doi.org/10.1038/nmeth.3869
+Callahan, B., McMurdie, P., Rosen, M. et al. DADA2: High-resolution sample inference from Illumina amplicon data. Nat Methods 13, 581–583 (2016). <https://doi.org/10.1038/nmeth.3869>
 
 ### Kraken2
 
-Wood, D., Lu, J., Langmead, B. Improved metagenomic analysis with Kraken 2. Genome Biology 20, 257 (2019). https://doi.org/10.1186/s13059-019-1891-0
+Wood, D., Lu, J., Langmead, B. Improved metagenomic analysis with Kraken 2. Genome Biology 20, 257 (2019). <https://doi.org/10.1186/s13059-019-1891-0>
 
 ### phyloseq
 
-McMurdie, P., Holmes, S. phyloseq: An R Package for Reproducible Interactive Analysis and Graphics of Microbiome Census Data. PLOS One 8, 4 (2013). https://doi.org/10.1371/journal.pone.0061217
+McMurdie, P., Holmes, S. phyloseq: An R Package for Reproducible Interactive Analysis and Graphics of Microbiome Census Data. PLOS One 8, 4 (2013). <https://doi.org/10.1371/journal.pone.0061217>
 
 ### qiime2
 
-Bolyen, Evan, Jai Ram Rideout, Matthew R. Dillon, Nicholas A. Bokulich, Christian Abnet, Gabriel A. Al-Ghalith, Harriet Alexander, et al. 2018. “QIIME 2: Reproducible, Interactive, Scalable, and Extensible Microbiome Data Science.” e27295v2. PeerJ Preprints. https://doi.org/10.7287/peerj.preprints.27295v2.
+Bolyen, Evan, Jai Ram Rideout, Matthew R. Dillon, Nicholas A. Bokulich, Christian Abnet, Gabriel A. Al-Ghalith, Harriet Alexander, et al. 2018. “QIIME 2: Reproducible, Interactive, Scalable, and Extensible Microbiome Data Science.” e27295v2. PeerJ Preprints. <https://doi.org/10.7287/peerj.preprints.27295v2>.
 
 ### FastTree
 
 Price, Morgan N., Paramvir S. Dehal, and Adam P. Arkin. 2010. “FastTree 2--Approximately Maximum-Likelihood Trees for Large Alignments.” PloS One 5 (3): e9490.
+
+### TreeSummarizedExperiment
+
+Huang, Ruizhu, Charlotte Soneson, Felix G. M. Ernst, Kevin C. Rue-Albrecht, Guangchuang Yu, Stephanie C. Hicks, and Mark D. Robinson. 2020. “TreeSummarizedExperiment: A S4 Class for Data with Hierarchical Structure.” F1000Research 9 (October): 1246.

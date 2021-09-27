@@ -52,6 +52,8 @@ install.packages("docopt")
 
 # extra
 install.packages("taxizedb")
+install.packages("zCompositions")
+install.packages("Hmisc")
 
 # documentation
 install.packages("gert")

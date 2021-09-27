@@ -28,3 +28,15 @@ rule make_tree:
   --o-masked-alignment {output.mask_alignment} \
   --o-tree {output.unroot_tree} \
   --o-rooted-tree {output.root_tree}"""
+
+rule export_tree:
+  input:
+    root_tree = "output/phylotree/rooted_tree.qza"
+  output:
+    newick_tree = "output/phylotree/newick/tree.nwk"
+  conda:
+    "../envs/qiime2_2021_08_conda.yaml"
+  shell:
+    """qiime tools export \
+      --input-path {input.root_tree} \
+      --output-path {output.newick_tree}"""

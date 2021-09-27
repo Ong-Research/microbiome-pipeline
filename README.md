@@ -51,10 +51,12 @@ separated by a tab space. Then, we can use different commands in the pipeline, f
 * `snakemake -j{cores} all_qc` plots quality profiles, and build a `multiqc` report
 * `snakemake -j{cores} dada2` computes the ASV matrix from the different batches
 * `snakemake -j{cores} all_taxonomy_kraken` to labels the ASV sequences with [kraken2](https://ccb.jhu.edu/software/kraken2/). Databases need to be downloaded from <https://benlangmead.github.io/aws-indexes/k2>
-* `snakemake -j{cores} all_phyloseq` to perform the generate a `phyloseq` object, align sequences and compute the alpha / beta diversities. This step is not stable yet, but alternatively a good ending point could be `snakemake -j{cores} init_phyloseq`
+* `snakemake -j{cores} phylotree` computes the phylogenetic tree using `qiime2`'s FastTree
+* `snakemake -j{cores} mia` prepare the `TreeSummarizedExperiment` containing all the data generated
 
-* `snakemake -j{cores} clean` removes everything
-* `snakemake -j{cores} clean_phyloseq` removes only the phyloseq object and diversities
+![microbiome_pipeline](microbiome.png)
+
+
 
 ## Cite
 
@@ -70,3 +72,10 @@ Wood, D., Lu, J., Langmead, B. Improved metagenomic analysis with Kraken 2. Geno
 
 McMurdie, P., Holmes, S. phyloseq: An R Package for Reproducible Interactive Analysis and Graphics of Microbiome Census Data. PLOS One 8, 4 (2013). https://doi.org/10.1371/journal.pone.0061217
 
+### qiime2
+
+Bolyen, Evan, Jai Ram Rideout, Matthew R. Dillon, Nicholas A. Bokulich, Christian Abnet, Gabriel A. Al-Ghalith, Harriet Alexander, et al. 2018. “QIIME 2: Reproducible, Interactive, Scalable, and Extensible Microbiome Data Science.” e27295v2. PeerJ Preprints. https://doi.org/10.7287/peerj.preprints.27295v2.
+
+### FastTree
+
+Price, Morgan N., Paramvir S. Dehal, and Adam P. Arkin. 2010. “FastTree 2--Approximately Maximum-Likelihood Trees for Large Alignments.” PloS One 5 (3): e9490.

@@ -77,6 +77,7 @@ rule dada2:
       batch = batches, sample = all_samples, allow_missing = True),
     expand("output/dada2/asv_batch/{batch}_asv.qs", batch = batches),
     expand("output/dada2/asv_batch/{batch}_summary.tsv", batch = batches),
+    "output/dada2/after_qc/asv_mat_wo_chim.qs"
     "workflow/report/dada2qc/asv_matrix_wo_chim.png",
     "workflow/report/dada2qc/nasvs_by_seqlength.png",
     "workflow/report/dada2qc/nasvs_by_seqabundance.png",
@@ -104,32 +105,33 @@ rule phylotree:
     "output/phylotree/aligned_sequences.qza",
     "output/phylotree/masked_aligned_sequences.qza",
     "output/phylotree/unrooted_tree.qza",
-    "output/phylotree/rooted_tree.qza"
+    "output/phylotree/rooted_tree.qza",
+    "output/phylotree/newick/tree.nwk"
 
 rule clean_phylotree:
   shell:
     "rm -fr output/phylotree"
     
-# rule all_phyloseq:
-#   input:
-#     "data/phyloseq/asv_phyloseq.qs",
-#     "data/phyloseq/asv_phyloseq_norm.qs",
-#     "data/phyloseq/div/alphadiv.qs"
-#     # "data/phyloseq/div/betadiv.qs"
-#     # "data/phyloseq/div/unifrac_dist.qs"
-
-# rule clean:
-#   shell:
-#     """rm -r data/asv data/filtered data/stats data/model \
-#         data/fasta data/taxonomy data/phyloseq logs"""
-
-# rule clean_phyloseq:
-#   shell:
-#     """rm -r data/phyloseq"""
+rule mia:
+  input:
+    asv = "output/dada2/after_qc/asv_mat_wo_chim.qs",
+    taxa = "output/taxa/kraken/minikraken/kraken_taxatable.qs",
+    tree = "output/phylotree/newick/tree.nwk",
+    meta = "data/meta.tsv"
+  output:
+    mia = "output/mia/mia_object.qs"
+  params:
+    prefix = config['asv_prefix']
+  log:
+    "logs/prepare_mia_object.log"
+  shell:
+    """Rscript workflow/scripts/mia/prepare_mia_object.R \
+      {output.mia} --asv={input.asv} --taxa={input.taxa} \
+      --tree={input.tree} --meta={input.meta} \
+      --asv_prefix={params.prefix} --log={log}"""
 
 include: "rules/extra_dust.smk"
 include: "rules/quality_control.smk"
 include: "rules/dada2.smk"
 include: "rules/taxonomy.smk"
 include: "rules/phylo_tree.smk"
-# include: "rules/mia.smk"

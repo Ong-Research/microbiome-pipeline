@@ -124,11 +124,12 @@ rule mia:
     prefix = config['asv_prefix']
   log:
     "logs/prepare_mia_object.log"
+  threads: config["threads"]
   shell:
     """Rscript workflow/scripts/mia/prepare_mia_object.R \
       {output.mia} --asv={input.asv} --taxa={input.taxa} \
       --tree={input.tree} --meta={input.meta} \
-      --asv_prefix={params.prefix} --log={log}"""
+      --asv_prefix={params.prefix} --log={log} --cores={threads}"""
 
 include: "rules/extra_dust.smk"
 include: "rules/quality_control.smk"

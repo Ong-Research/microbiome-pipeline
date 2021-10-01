@@ -6,7 +6,7 @@
 "Prepare mia object
 
 Usage:
-prepare_mia_object.R [<mia_file>] [--asv=<asv_file> --taxa=<taxa_file> --tree=<tree_file> --meta=<meta_file>] [--asv_prefix=<prefix> --log=<logfile>]
+prepare_mia_object.R [<mia_file>] [--asv=<asv_file> --taxa=<taxa_file> --tree=<tree_file> --meta=<meta_file>] [--asv_prefix=<prefix> --log=<logfile> --cores=<cores>]
 prepare_mia_object.R (-h|--help)
 prepare_mia_object.R --version
 
@@ -16,7 +16,8 @@ Options:
 --taxa=<taxa_file>    Taxa file
 --tree=<tree_file>    Tree file
 --meta=<meta_file>    Metadata file
---log=<logfile>    name of the log file [default: logs/filter_and_trim.log]" -> doc
+--log=<logfile>    name of the log file [default: logs/filter_and_trim.log]
+--cores=<cores>    number of parallel CPUs [default: 8]" -> doc
 
 library(docopt)
 
@@ -49,6 +50,7 @@ library(magrittr)
 library(tidyverse)
 library(TreeSummarizedExperiment)
 library(Biostrings)
+library(BiocParallel)
 library(ape)
 library(mia)
 library(qs)
@@ -82,13 +84,21 @@ cdata <- meta %>%
   tibble::column_to_rownames("key")
 
 out <- TreeSummarizedExperiment::TreeSummarizedExperiment(
-  assays = list(Count = t(asv)),
+  assays = list(counts = t(asv)),
   colData = cdata,
   rowData = asv_aux %>%
     dplyr::left_join(taxa, by = "asv") %>%
     as.data.frame() %>%
     tibble::column_to_rownames("asv"),
   rowTree = tree)
+
+bpp <- BiocParallel::MulticoreParam(workers = as.numeric(arguments$cores))
+
+message("estimate diversity")
+out <- mia::estimateDiversity(out, abund_values = "counts", BPPARAM = bpp)
+
+message("estimate richness")
+out <- mia::estimateRichness(out, abund_values = "counts", BPPARAM = bpp)
 
 metadata(out)[["date_processed"]] <- Sys.Date()
 metadata(out)[["sequences"]] <- asv_sequences

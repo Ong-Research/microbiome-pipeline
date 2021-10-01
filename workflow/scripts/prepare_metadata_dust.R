@@ -1,15 +1,18 @@
 #!/ua/rwelch/miniconda3/envs/wiscdust/bin/Rscript
 
-#' Updates old metadata file to use the same keys as in the 
-#' `./samples.tsv` file
+#' Updates old metadata file to use the same keys as in the `./samples.tsv` file
 #' @author rwelch
 
 "Prepares a table to match negative controls to samples
 
 Usage:
-  prepare_metadata_dust.R [<outfile>] [--sample_table=<sample_table>  --xlsx_file=<xlsx_file>]
-  prepare_metadata_dust.R (-h|--help)
-  prepare_metadata_dust.R --version" -> doc
+prepare_metadata_dust.R [<outfile>] [--samples=<sample_table> --xlsx_file=<xlsx_file>]
+prepare_metadata_dust.R (-h|--help)
+prepare_metadata_dust.R --version
+
+Options:
+--samples=<sample_table>   Name of the file with the samples table.
+--xlsx_file=<xlsx_file>    Name of an xlsx table with metadata." -> doc
   
 library(docopt)
 
@@ -18,8 +21,8 @@ my_args <- commandArgs(trailingOnly = TRUE)
 arguments <- docopt(doc, args = my_args,
   version = "prepare metadata dust v1")
 
-if (is.null(arguments$sample_table_file)) {
-  arguments$sample_table <- "samples.tsv"
+if (is.null(arguments$samples)) {
+  arguments$samples <- "samples.tsv"
 }
 if (is.null(arguments$outfile)) arguments$outfile <- "data/meta.qs"
 
@@ -29,7 +32,7 @@ if (interactive()) {
 }
 
 
-stopifnot(file.exists(arguments$sample_table))
+stopifnot(file.exists(arguments$samples))
 
 library(magrittr, quietly = TRUE)
 library(tidyverse, quietly = TRUE)
@@ -37,7 +40,7 @@ library(readxl, quietly = TRUE)
 library(qs, quietly = TRUE)
 
 
-sample_table <- readr::read_tsv(arguments$sample_table)
+sample_table <- readr::read_tsv(arguments$samples)
 
 xls_table <- readxl::read_xlsx(arguments$xlsx_file,
   sheet = readxl::excel_sheets(arguments$xlsx_file)[1],
@@ -184,6 +187,12 @@ pre %<>%
   mutate_if(is.character, list(snakecase::to_snake_case)) %>%
   mutate_at(vars(ends_with("sid")), list(as.character)) %>%
   select(-months)
+
+meta %<>%
+  dplyr::mutate(
+    baby_sid = if_else(str_detect(baby_sid, regex("0$")),
+      as.character(as.numeric(baby_sid) + 1), baby_sid))
+
 
 out <- tribble(
   ~ prefix, ~ content, ~ data,

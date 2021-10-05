@@ -6,7 +6,7 @@
 "Prepare mia object
 
 Usage:
-prepare_mia_object.R [<mia_file>] [--asv=<asv_file> --taxa=<taxa_file> --tree=<tree_file> --meta=<meta_file>] [--asv_prefix=<prefix> --log=<logfile> --cores=<cores>]
+prepare_mia_object.R [<mia_file>] [--asv=<asv_file> --taxa=<taxa_file> --tree=<tree_file> --meta=<meta_file>] [--asv_prefix=<prefix> --log=<logfile> --config=<config> --cores=<cores>]
 prepare_mia_object.R (-h|--help)
 prepare_mia_object.R --version
 
@@ -17,6 +17,7 @@ Options:
 --tree=<tree_file>    Tree file
 --meta=<meta_file>    Metadata file
 --log=<logfile>    name of the log file [default: logs/filter_and_trim.log]
+--config=<config>    name of the config file [default: config/config.yaml]
 --cores=<cores>    number of parallel CPUs [default: 8]" -> doc
 
 library(docopt)
@@ -39,6 +40,7 @@ if (interactive()) {
   arguments$tree <- "output/phylotree/newick/tree.nwk"
   arguments$meta <- "data/meta.tsv"
   arguments$asv_prefix <- "HSD2M"
+
 }
 
 print(arguments)
@@ -54,6 +56,9 @@ library(BiocParallel)
 library(ape)
 library(mia)
 library(qs)
+library(scater)
+library(yaml)
+library(parallelDist)
 
 stopifnot(
   file.exists(arguments$asv),
@@ -61,6 +66,8 @@ stopifnot(
   file.exists(arguments$tree),
   file.exists(arguments$meta)
 )
+
+if (!is.null(arguments$config)) stopifnot(file.exists(arguments$config))
 
 asv <- qs::qread(arguments$asv)
 taxa <- qs::qread(arguments$taxa)
@@ -100,8 +107,97 @@ out <- mia::estimateDiversity(out, abund_values = "counts", BPPARAM = bpp)
 message("estimate richness")
 out <- mia::estimateRichness(out, abund_values = "counts", BPPARAM = bpp)
 
+if (!is.null(arguments$config)) {
+
+  config <- yaml::read_yaml(arguments$config)[["beta"]]
+
+}
+
+compute_mds_wrap <- function(mia, dist_name, altexp_name, ncomps) {
+
+  message("computing beta diversity for ", dist_name)
+
+  if (dist_name %in% c("bray", "euclidean", "hellinger", "mahalanobis",
+    "manhattan", "bhjattacharyya", "canberra", "chord")) {
+
+    mia <- scater::runMDS(
+      mia, FUN = parallelDist::parDist,
+      method = dist_name, threads = as.numeric(arguments$cores),
+      name = altexp_name, ncomponents = ncomps, exprs_values = "counts",
+      keep_dist = FALSE)
+
+  } else if (dist_name == "fjaccard") {
+
+    mia <- scater::runMDS(
+      mia, FUN = parallelDist::parDist,
+      method = "fJaccard", threads = as.numeric(arguments$cores),
+      name = altexp_name, ncomponents = ncomps, exprs_values = "counts",
+      keep_dist = FALSE)
+
+  } else if (dist_name == "unifrac") {
+
+    unifrac <- mia::calculateUniFrac(
+      x = t(counts(mia)), tree = rowTree(mia),
+      weighted = FALSE, normalized = FALSE, BPPARAM = bpp)
+
+    pcoa <- stats::cmdscale(unifrac, k = ncomps)
+    SingleCellExperiment::reducedDim(mia, altexp_name) <- pcoa
+
+
+  } else if (dist_name == "w_unifrac") {
+    unifrac <- mia::calculateUniFrac(
+      x = t(counts(mia)), tree = rowTree(mia),
+      weighted = TRUE, normalized = FALSE, BPPARAM = bpp)
+
+    pcoa <- stats::cmdscale(unifrac, k = ncomps)
+    SingleCellExperiment::reducedDim(mia, altexp_name) <- pcoa
+  } else if (dist_name == "w_unifrac_norm") {
+
+    unifrac <- mia::calculateUniFrac(
+      x = t(counts(mia)), tree = rowTree(mia),
+      weighted = TRUE, normalized = TRUE, BPPARAM = bpp)
+    pcoa <- stats::cmdscale(unifrac, k = ncomps)
+    SingleCellExperiment::reducedDim(mia, altexp_name) <- pcoa
+
+  } else {
+    stop(dist_name, " distance not available")
+  }
+  mia
+
+}
+
+
+
+if (!is.null(config$beta_div)) {
+  for (div in config$beta_div) {
+    out <- compute_mds_wrap(out, div, str_c("all_", div), config$comps)
+  }
+}
+
+if (any(config$beta_group != "all")) {
+
+  beta_group <- config$beta_group
+  beta_group <- beta_group[beta_group != "all"]
+  grouped <- purrr::map(beta_group,
+    ~ mia::agglomerateByRank(out, rank = ., na.rm = FALSE))
+  names(grouped) <- beta_group
+
+  config$beta_div <- config$beta_div[!str_detect(config$beta_div, "unifrac")]
+
+  for (gg in names(grouped)) {
+  message(gg)
+    for (div in config$beta_div) {
+      grouped[[gg]] <- compute_mds_wrap(grouped[[gg]], div,
+        str_c(gg, div, sep = "_"), config$comps)
+    }
+  }
+
+  SingleCellExperiment::altExps(out) <- grouped
+}
+
 metadata(out)[["date_processed"]] <- Sys.Date()
 metadata(out)[["sequences"]] <- asv_sequences
 
 fs::dir_create(dirname(arguments$mia_file))
 qs::qsave(out, arguments$mia_file)
+message("done!")

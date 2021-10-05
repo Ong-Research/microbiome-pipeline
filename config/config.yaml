@@ -102,9 +102,11 @@ kraken_dbs:
 # more details: https://github.com/DerrickWood/kraken2/wiki/Manual#output-formats
 kraken_confidence: 0.01
 
-# phyloseq 
-# any of c("bray", "fJaccard", "euclidean",
+# beta_div
+# any of c("bray", "fjaccard", "euclidean",
   # "hellinger", "mahalanobis", "manhattan", "bhjattacharyya", "canberra",
   # "chord", "unifrac", "w_unifrac", "w_unifrac_norm")
-phyloseq:
-  beta: ["bray", "canberra"]
+beta:
+  comps: 5
+  beta_div: ["bray", "fjaccard", "unifrac", "w_unifrac"]
+  beta_group: ["all", "genus", "family", "order"]

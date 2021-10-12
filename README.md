@@ -33,10 +33,10 @@ There are two steps to install the pipeline:
 
 ### Troubleshooting conda and environment variables
 
-If you have other versions of R and R user libraries elsewhere, 
-you might encounter some problems with environment variables and conda. 
-You may need to provide a local `.bashrc` file to 
-place the conda path at the beginning of your `$PATH` environment variable.
+    If you have other versions of R and R user libraries elsewhere, 
+    you might encounter some problems with environment variables and conda. 
+    You may need to provide a local `.bashrc` file to 
+    place the conda path at the beginning of your `$PATH` environment variable.
 
     ```sh
     source /etc/bash_completion.d/git
@@ -69,7 +69,7 @@ place the conda path at the beginning of your `$PATH` environment variable.
 
    ```sh
     fqdir=/path/to/existing_fastq_files/
-    batchdir=/data/batch01
+    batchdir=data/batch01
     ln -s ${fqdir}/*.fastq.gz ${batchdir}    
    ```
 

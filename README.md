@@ -37,6 +37,7 @@ If you have other versions of R and R user libraries elsewhere,
 you might encounter some problems with environment variables and conda. 
 You may need to provide a local `.bashrc` file to 
 place the conda path at the beginning of your `$PATH` environment variable.
+**You may not need to do this step.**
 
 ```sh
 source /etc/bash_completion.d/git
@@ -86,13 +87,17 @@ export PATH="/path/to/miniconda3/envs/microbiome/bin:$PATH"
     ```
 
     
+3. **Set up sample metadata file.** This is where to link sample IDs to variables of interest to your study (condition, body site, time point, etc). **As currently implemented**, this is only used to augment the final TreeSummarizedExperiment file, which you will use for your own downstream analysis. You need to have a column `key` that matches the sample table. For example:
 
-3. **Set up sample metadata file.**
 
-4. **Set up negative control mapping file.** If you have negative control samples, you should make a table linking each study sample to its negative control kit(s). **At this point**, this needs to be a `qs` file containing a tibble of this format:
+    ```txt
+    | key | subject_id | body_site | time_point | ... 
+    ```
+
+4. **Set up negative control mapping file.** If you have negative control samples, you should make a table linking each study sample to its negative control kit(s). **As currently implemented**, this needs to be a `qs` file containing a tibble of this format:
 
     ```r
-        # A tibble: ... x 3
+    # A tibble: 3 x 3
     batch        key       kits     
     <chr>        <chr>     <list>   
     1 batch01 sample_1  <chr [3]>

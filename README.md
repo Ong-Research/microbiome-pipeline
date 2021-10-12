@@ -79,13 +79,13 @@ place the conda path at the beginning of your `$PATH` environment variable.
     Rscript ./prepare_sample_table.R
     ```
 
-will generate the `samples.tsv` file that contains 4 columns (the file will not actually contain |)
+    will generate the `samples.tsv` file that contains 4 columns separated by tabs (the file will not actually contain |) 
 
     ```txt
     | batch | key | end1 | end2 |
     ```
 
-separated by a tab space. 
+    
 
 3. **Set up sample metadata file.**
 

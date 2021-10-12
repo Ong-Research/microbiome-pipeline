@@ -33,28 +33,28 @@ There are two steps to install the pipeline:
 
 ### Troubleshooting conda and environment variables
 
-    If you have other versions of R and R user libraries elsewhere, 
-    you might encounter some problems with environment variables and conda. 
-    You may need to provide a local `.bashrc` file to 
-    place the conda path at the beginning of your `$PATH` environment variable.
+If you have other versions of R and R user libraries elsewhere, 
+you might encounter some problems with environment variables and conda. 
+You may need to provide a local `.bashrc` file to 
+place the conda path at the beginning of your `$PATH` environment variable.
 
-    ```sh
-    source /etc/bash_completion.d/git
-    __conda_setup="$('/path/to/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-    if [ $? -eq 0 ]; then
-        eval "$__conda_setup"
+```sh
+source /etc/bash_completion.d/git
+__conda_setup="$('/path/to/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/path/to/miniconda3/etc/profile.d/conda.sh" ]; then
+    . "/path/to/miniconda3/etc/profile.d/conda.sh"
     else
-        if [ -f "/path/to/miniconda3/etc/profile.d/conda.sh" ]; then
-        . "/path/to/miniconda3/etc/profile.d/conda.sh"
-        else
-            export PATH="/path/to/miniconda3/bin:$PATH"
-        fi
+        export PATH="/path/to/miniconda3/bin:$PATH"
     fi
-    unset __conda_setup
+fi
+unset __conda_setup
 
-    alias R='R --vanilla'
-    export PATH="/path/to/miniconda3/envs/microbiome/bin:$PATH"
-    ```
+alias R='R --vanilla'
+export PATH="/path/to/miniconda3/envs/microbiome/bin:$PATH"
+```
 
 ## Set up data directories and metadata files
 

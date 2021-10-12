@@ -92,12 +92,12 @@ separated by a tab space.
 4. **Set up negative control mapping file.** If you have negative control samples, you should make a table linking each study sample to its negative control kit(s). **At this point**, this needs to be a `qs` file containing a tibble of this format:
 
     ```r
-    # A tibble: ... x 3
-   batch        key       kits     
-   <chr>        <chr>     <list>   
- 1 batch01 sample_1  <chr [3]>
- 2 batch01 sample_2  <chr [1]>
- 3 batch02 sample_3  <chr [1]>
+        # A tibble: ... x 3
+    batch        key       kits     
+    <chr>        <chr>     <list>   
+    1 batch01 sample_1  <chr [3]>
+    2 batch01 sample_2  <chr [1]>
+    3 batch02 sample_3  <chr [1]>
     ```
 
 Each element of `key` is a study sample ID matching the sample table.

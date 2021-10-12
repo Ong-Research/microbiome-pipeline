@@ -43,7 +43,7 @@ def get_sample_files(path,outfile='samples.tsv'):
         logging.error(f"Missing files:\n {samples}")
 
     if os.path.exists(outfile):
-        logging.error(f"Output file {outfile} already exists I don't date to overwrite it.")
+        logging.error(f"Output file {outfile} already exists I don't dare to overwrite it.")
         exit(1)
     else:
         samples.to_csv(outfile,sep='\t')

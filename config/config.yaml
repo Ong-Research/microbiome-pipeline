@@ -5,7 +5,7 @@
 # a samples.tsv file that contains one row per sample.
 
 # general parameters for run
-asv_prefix: "HSD2M"
+asv_prefix: "asv"
 sample_table: "samples.tsv"
 negcontroltable: "negcontrols.tsv"
 metadata: "meta.tsv"

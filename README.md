@@ -31,32 +31,92 @@ There are two steps to install the pipeline:
     R CMD BATCH --vanilla ./install_r_packages.R
     ```
 
-## Run workflow
+### Troubleshooting conda and environment variables
 
-The input for the pipeline are the sequencing files separated by batch in the `data/` directory. Using:
+If you have other versions of R and R user libraries elsewhere, 
+you might encounter some problems with environment variables and conda. 
+You may need to provide a local `.bashrc` file to 
+place the conda path at the beginning of your `$PATH` environment variable.
+
+    ```sh
+    source /etc/bash_completion.d/git
+    __conda_setup="$('/path/to/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+    if [ $? -eq 0 ]; then
+        eval "$__conda_setup"
+    else
+        if [ -f "/path/to/miniconda3/etc/profile.d/conda.sh" ]; then
+        . "/path/to/miniconda3/etc/profile.d/conda.sh"
+        else
+            export PATH="/path/to/miniconda3/bin:$PATH"
+        fi
+    fi
+    unset __conda_setup
+
+    alias R='R --vanilla'
+    export PATH="/path/to/miniconda3/envs/microbiome/bin:$PATH"
+    ```
+
+
+## Set up data directories and metadata files
+
+1. **Set up a data/ directory with one subdirectory per batch.** The pipeline will look in the `data/` directory to find subdirectories that contain `fastq.gz` files. You can specify different filtering and trimming parameters per batch, and `dada2` will learn error rates per batch. So, you may wish to separate your files by sequencing batch and/or by sample type.
+   
+   ```sh
+    mkdir data/
+    mkdir data/batch01 [data/batch02 ... ]
+   ```
+
+   Next, populate the subdirectories with your `fastq.gz` (or `fastq`) files, making sure to include both R1 and R2. If your data are already located elsewhere in your file system, you can use symbolic links (symlinks) to avoid duplicating data:
+
+   ```sh
+    fqdir=/path/to/existing_fastq_files/
+    batchdir=/data/batch01
+    ln -s ${fqdir}/*.fastq.gz ${batchdir}    
+   ```
+
+2. **Generate sample table.** The input for the pipeline are the sequencing files separated by batch in the `data/` directory. Using:
 
 ```sh
 Rscript ./prepare_sample_table.R
 ```
 
-Will generate the `samples.tsv` file that contains 4 columns:
+will generate the `samples.tsv` file that contains 4 columns (the file will not actually contain |)
 
 ```txt
 | batch | key | end1 | end2 |
 ```
 
-separated by a tab space. Then, we can use different commands in the pipeline, for example considering 16 threads:
+separated by a tab space. 
+
+3. **Set up sample metadata file.**
+
+4. **Set up negative control mapping file.** If you have negative control samples, you should make a table linking each study sample to its negative control kit(s). **At this point**, this needs to be a `qs` file containing a tibble of this format:
+
+    ```r
+    # A tibble: ... x 3
+   batch        key       kits     
+   <chr>        <chr>     <list>   
+ 1 batch01 sample_1  <chr [3]>
+ 2 batch01 sample_2  <chr [1]>
+ 3 batch02 sample_3  <chr [1]>
+    ```
+
+Each element of `key` is a study sample ID matching the sample table.
+Each element of `kits` is a character list of sample keys for negative control samples,
+eg `c("sample_141", "sample_142", "sample_143")`.
+    
+## Run workflow
+
+Then, we can use different commands in the pipeline, for example considering 16 threads:
 
 * `snakemake -j{cores}` runs everything
-* `snakemake -j{cores} all_qc` plots quality profiles, and build a `multiqc` report
+* `snakemake -j{cores} sequence_qc` plots quality profiles, and build a `multiqc` report
 * `snakemake -j{cores} dada2` computes the ASV matrix from the different batches
 * `snakemake -j{cores} all_taxonomy_kraken` to labels the ASV sequences with [kraken2](https://ccb.jhu.edu/software/kraken2/). Databases need to be downloaded from <https://benlangmead.github.io/aws-indexes/k2>
 * `snakemake -j{cores} phylotree` computes the phylogenetic tree using `qiime2`'s FastTree
 * `snakemake -j{cores} mia` prepare the `TreeSummarizedExperiment` containing all the data generated
 
 ![microbiome_pipeline](microbiome.png)
-
-
 
 ## Cite
 

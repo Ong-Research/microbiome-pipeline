@@ -133,7 +133,7 @@ rule mia:
       --asv_prefix={params.prefix} --log={log} \
       --config={params.config} --cores={threads}"""
 
-include: "rules/extra_dust.smk"
+#include: "rules/extra_dust.smk"
 include: "rules/quality_control.smk"
 include: "rules/dada2.smk"
 include: "rules/taxonomy.smk"

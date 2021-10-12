@@ -57,7 +57,7 @@ alias R='R --vanilla'
 export PATH="/path/to/miniconda3/envs/microbiome/bin:$PATH"
 ```
 
-## Set up data directories and metadata files
+## Set up data and metadata
 
 1. **Set up a data/ directory with one subdirectory per batch.** The pipeline will look in the `data/` directory to find subdirectories that contain `fastq.gz` files. You can specify different filtering and trimming parameters per batch, and `dada2` will learn error rates per batch. So, you may wish to separate your files by sequencing batch and/or by sample type.
    
@@ -94,6 +94,8 @@ export PATH="/path/to/miniconda3/envs/microbiome/bin:$PATH"
     | key | subject_id | body_site | time_point | ... 
     ```
 
+    The default path for this file is `data/meta.tsv`. If you have it named otherwise, edit the variable `metadata` in `config/config.yaml` to point to your file.
+
 4. **Set up negative control mapping file.** If you have negative control samples, you should make a table linking each study sample to its negative control kit(s). **As currently implemented**, this needs to be a `qs` file containing a tibble of this format:
 
     ```r
@@ -108,8 +110,13 @@ export PATH="/path/to/miniconda3/envs/microbiome/bin:$PATH"
     Each element of `key` is a study sample ID matching the sample table.
     Each element of `kits` is a character list of sample keys for negative control samples,
     eg `c("sample_141", "sample_142", "sample_143")`.
+
+
+    The default path for this file is `data/negcontrols.qs`. If you have it named otherwise, edit the variable `negcontroltable` in `config/config.yaml` to point to your file.
     
 ## Run workflow
+
+1. **Run sequence QC and choose filter_and_trim parameters.** If you have not run the pipeline before, the first thing you will need to do is to 
 
 Then, we can use different commands in the pipeline, for example considering 16 threads:
 

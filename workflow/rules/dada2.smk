@@ -113,7 +113,7 @@ rule remove_chimeras:
 rule filter_asvs:
   input:
     seqtab = "output/dada2/remove_chim/asv_mat_wo_chim.qs",
-    negcontrol = "data/negcontrols.qs"
+    negcontrol = config["negcontroltable"] # "data/negcontrols.qs"
   output:
     plot_seqlength = "workflow/report/dada2qc/nasvs_by_seqlength.png",
     plot_seqabundance = "workflow/report/dada2qc/nasvs_by_seqabundance.png",

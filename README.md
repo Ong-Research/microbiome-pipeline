@@ -62,7 +62,7 @@ place the conda path at the beginning of your `$PATH` environment variable.
    
    ```sh
     mkdir data/
-    mkdir data/batch01 [data/batch02 ... ]
+    mkdir data/batch01 \[data/batch02 ... \]
    ```
 
    Next, populate the subdirectories with your `fastq.gz` (or `fastq`) files, making sure to include both R1 and R2. If your data are already located elsewhere in your file system, you can use symbolic links (symlinks) to avoid duplicating data:

@@ -16,7 +16,7 @@ threads: 8
 filter_and_trim:
   batch2018:
     truncQ: 0
-    #truncLen: [140, 130]
+    truncLen: 150
     trimLeft: 0
     trimRight: 0
     maxLen: Inf
@@ -26,7 +26,7 @@ filter_and_trim:
     maxEE: [2, 2]
   batch2019:
     truncQ: 0
-    #truncLen: [140, 130]
+    truncLen: 150
     trimLeft: 0
     trimRight: 0
     maxLen: Inf

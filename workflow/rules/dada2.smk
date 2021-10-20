@@ -17,10 +17,13 @@ rule filter_and_trim_sample:
       {output.end1} {output.end2} {output.summary} \
       {params.sample_name} --end1={input.end1} --end2={input.end2} \
       --batch={params.batch} --log={log} --config={params.config}
+      
       if [[ -s {output.summary} && ! -s {output.end1} && ! -s {output.end2} ]]; then
+        echo "Filtering succeeded but all reads were removed. Creating temp placeholder files."
         touch {output.end1}
         touch {output.end2}
-      fi"""
+      fi
+      """
 
 rule learn_error_rates_batch_end:
   input:

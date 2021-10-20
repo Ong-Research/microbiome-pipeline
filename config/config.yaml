@@ -94,6 +94,6 @@ kraken_confidence: 0.01
   # "hellinger", "mahalanobis", "manhattan", "bhjattacharyya", "canberra",
   # "chord", "unifrac", "w_unifrac", "w_unifrac_norm")
 beta:
-  comps: 5
+  comps: 20
   beta_div: ["bray", "fjaccard", "unifrac", "w_unifrac"]
   beta_group: ["all", "genus", "family", "order"]

@@ -17,14 +17,17 @@ rule filter_and_trim_sample:
       {output.end1} {output.end2} {output.summary} \
       {params.sample_name} --end1={input.end1} --end2={input.end2} \
       --batch={params.batch} --log={log} --config={params.config}
+      
       if [[ -s {output.summary} && ! -s {output.end1} && ! -s {output.end2} ]]; then
+        echo "Filtering succeeded but all reads were removed. Creating temp placeholder files."
         touch {output.end1}
         touch {output.end2}
-      fi"""
+      fi
+      """
 
 rule learn_error_rates_batch_end:
   input:
-    filtered = lambda wc: temp(expand("output/dada2/filtered/{sample}_filtered_{end}.fastq.gz", sample = get_batch_samples(sample_table, wc.batch), end = ["R1", "R2"]))
+    filtered = lambda wc: temp(expand("output/dada2/filtered/{sample}_filtered_{end}.fastq.gz", sample = get_batch_samples(sample_table, wc.batch), end = wc.end)
   output:
     mat = "output/dada2/model/{batch}_error_rates_{end}.qs",
     plot = "workflow/report/model/{batch}_error_rates_{end}.png"
@@ -74,18 +77,19 @@ rule dereplicate_sample:
     "logs/dada2/03_{batch}_{sample}_merge.log"
   shell:
     """
-      if [[ ! -s {filt.end1} && ! -s {filt.end2} ]]; then
+      if [[ -e {input.filt_end1} && -e {input.filt_end2} && ! -s {input.filt_end1} && ! -s {input.filt_end2} ]]; then
           touch {output.merge} 
-          echo "Filtered files have no reads:"
-          ls {filt.end1} {filt.end2}
-          echo "Generating placeholder faux output: {output.merge}"
+          echo "Filtering succeeded, but no reads were left after filtering:"
+          ls -l {input.filt_end1} {input.filt_end2}
+          echo "Generating placeholder output file: {output.merge}"
       else 
         Rscript workflow/scripts/dada2/dereplicate_one_sample_pair.R \
         {output.merge} {params.sample_name} \
         {input.filt_end1} {input.filt_end2} \
         --end1_err={input.mat_end1} --end2_err={input.mat_end2} \
         --log={log} --batch={params.batch} --config={params.config}
-      fi"""
+      fi
+   """
 
 rule dereplicate_batch:
   input:

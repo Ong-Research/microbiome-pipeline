@@ -5,6 +5,8 @@ output/
 logs/
 *tsv
 *qs
+*fastq.gz
+*gz
 extra.md
 .bashrc
 prepare_negcontrols_dust.R

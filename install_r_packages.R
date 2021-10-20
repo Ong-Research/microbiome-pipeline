@@ -64,7 +64,7 @@ install.packages("gert")
 install.packages("knitr")
 install.packages("rmarkdown")
 install.packages("workflowr")
-install.packages("Cairo")
+#install.packages("Cairo")
 install.packages("magick")
 
 # Bioconductor stuff

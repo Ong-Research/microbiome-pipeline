@@ -68,9 +68,9 @@ print(arguments)
 # to appease snakemake after all reads were
 # filtered out from the input file.
 # stop if we have no files left after checking for empty.
-sizes = lapply(arguments$filtered, FUN = function(x) file.info(x)$size) 
-sizes = setNames(sizes, arguments$filtered)
-nonempty = names(sizes[sizes > 0])
+sizes <- lapply(arguments$filtered, FUN = function(x) file.info(x)$size) 
+sizes <- setNames(sizes, arguments$filtered)
+nonempty <- names(sizes[sizes > 0])
 stopifnot(length(nonempty)>0)
 
 message("loading packages")

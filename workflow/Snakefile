@@ -31,25 +31,11 @@ def get_batch_samples(sample_table, batch):
   
   return list(out)
 
-JAVA_MEM_FRACTION=0.85
-CONDAENV ='envs'
-PAIRED_END= ('R2' in sample_table.columns)
-FRACTIONS= ['R1']
-if PAIRED_END: FRACTIONS+= ['R2']
-
-# def get_taxonomy_names():
-
-#     if 'idtaxa_dbs' in config and config['idtaxa_dbs'] is not None:
-#         return config['idtaxa_dbs'].keys()
-#     else:
-#         return []
-
-# rule all:
-#   input:
-#     "data/model/error_rates_R1.qs",
-#     "data/model/error_rates_R2.qs",
-#     "data/stats/Nreads_dada2.txt",
-#     "data/asv/seqtab_nochimeras_qc.qs"
+# JAVA_MEM_FRACTION=0.85
+# CONDAENV ='envs'
+# PAIRED_END= ('R2' in sample_table.columns)
+# FRACTIONS= ['R1']
+# if PAIRED_END: FRACTIONS+= ['R2']
 
 rule sequence_qc:
     input:

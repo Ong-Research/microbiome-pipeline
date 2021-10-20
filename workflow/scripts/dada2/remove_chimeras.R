@@ -1,27 +1,25 @@
 #!/usr/local/bin/Rscript
 
-#' `dada2::mergeSequenceTables` and `dada2::removeBimeraDenovo` wrapper
+#' Summarize number of reads per processing step
 #' @author rwelch2
-
-"Merge sequence tables and remove chimeras
+#' 
+"Summarized the # of reads per processing step
 
 Usage:
-remove_chimeras.R [<asv_merged_file> <summary_file> <fig_file>] [<asv_file> ...] [--log=<logfile> --config=<cfile> --cores=<cores>]
-remove_chimeras.R (-h|--help)
-remove_chimeras.R --version
+summarize_nreads.R [<nreads_file> <nreads_fig> <preads_fig>] [<filt_summary_file> <derep_summary_file> <final_asv_mat>] [--log=<logfile>]
+summarize_nreads.R (-h|--help)
+summarize_nreads.R --version
 
 Options:
 -h --help    show this screen
---log=<logfile>    name of the log file [default: filter_and_trim.log]
---config=<cfile>    name of the yaml file with the parameters [default: ./config/config.yaml]
---cores=<cores>    number of CPUs for parallel processing [default: 24]" -> doc
+--log=<logfile>    name of the log file [default: summarize_nreads.log]" -> doc
 
 library(docopt)
 
 my_args <- commandArgs(trailingOnly = TRUE)
 
 arguments <- docopt::docopt(doc, args = my_args,
-  version = "remove chimeras V1")
+  version = "summarize # reads V1")
 
 if (!interactive()) {
   fs::dir_create(dirname(arguments$log))
@@ -32,95 +30,111 @@ if (!interactive()) {
 
 if (interactive()) {
 
-  arguments$fig_file <- "matspy.png"
-  arguments$asv_merged_file <- "asv.qs"
-  arguments$summary_file <- "summary.qs"
-  arguments$asv_file <- list.files(file.path("output", "dada2",
-    "asv_batch"), full.names = TRUE, pattern = "asv")
+  arguments$filt_summary_file <-
+    "output/dada2/filtered/all_sample_summary.tsv"
+  arguments$derep_summary_file <-
+    "output/dada2/asv_batch/all_sample_summary.tsv"
+  arguments$final_asv_mat <-
+    "output/dada2/after_qc/asv_mat_wo_chim.qs"
+
+  arguments$nreads_file <-
+    "output/dada2/stats/Nreads_dada2.txt"
+  arguments$nreads_fig <-
+    "workflow/report/dada2qc/dada2steps_vs_abundance.png"
+  arguments$preads_fig <-
+    "workflow/report/dada2qc/dada2steps_vs_relabundance.png"
 
 }
 
+# Summarize numbers of reads per step, makes some plots
 
-message("arguments")
-print(arguments)
-
-## merges different ASV tables, and removes chimeras
-
-message("info")
 info <- Sys.info();
-print(stringr::str_c(names(info), " : ", info, "\n"))
+
+message(stringr::str_c(names(info), " : ", info, "\n"))
 
 message("loading packages")
 library(magrittr)
 library(tidyverse)
-library(dada2)
+library(vroom)
 library(qs)
-library(yaml)
-library(ComplexHeatmap)
 
-stopifnot(any(file.exists(arguments$asv_file)))
+stats <- list()
+stats[[1]] <- readr::read_tsv(arguments$filt_summary_file) %>%
+  select(-end1, -end2)
+stats[[2]] <- readr::read_tsv(arguments$derep_summary_file)
+stats[[3]] <- qs::qread(arguments$final_asv_mat) %>%
+  rowSums() %>%
+  tibble::tibble(samples = names(.), nreads = .)
 
-if (!is.null(arguments$config)) stopifnot(file.exists(arguments$config))
+#stats <- purrr::reduce(stats, purrr::partial(dplyr::inner_join, by = "samples"))
 
-config <- yaml::read_yaml(arguments$config)
-sample_table <- readr::read_tsv(config$sample)
-config <- config$remove_chimeras
+# change to full join so we see input files that were lost during any step
+stats <- purrr::reduce(stats, purrr::partial(dplyr::full_join, by = "samples"))
+# fill in 0s for final nreads for samples that were previously lost
+stats %<>%
+  dplyr::mutate(nreads = replace_na(nreads, 0))
 
-seqtab_list <- purrr::map(arguments$asv_file, qs::qread)
+stats %>%
+  readr::write_tsv(arguments$nreads_file)
 
-if (length(seqtab_list) > 1) {
-  seqtab_all <- dada2::mergeSequenceTables(tables = seqtab_list)
-} else {
-  seqtab_all <- seqtab_list[[1]]
+message("making figures")
+
+order_steps <- stats %>%
+  dplyr::select(-samples) %>%
+  names()
+
+rel_stats <- stats %>%
+  dplyr::mutate(
+    dplyr::across(
+      -samples, list(~ . / raw), .names = "{.col}"))
+
+# remove empties from relative change plot
+# they don't get plotted anyway
+rel_stats %<>%
+  dplyr::filter(!is.nan(nreads))
+
+make_plot <- function(stats, summary_fun = median, ...) {
+
+  order_steps <- stats %>%
+    dplyr::select(-samples) %>%
+    names()
+
+  stats %<>%
+    tidyr::pivot_longer(-samples, names_to = "step", values_to = "val") %>%
+    dplyr::mutate(step = factor(step, levels = order_steps))
+
+  summary <- stats %>%
+    dplyr::group_by(step) %>%
+    dplyr::summarize(
+      val = summary_fun(val, ...), .groups = "drop")
+
+  stats %>%
+    ggplot(aes(step, val)) + geom_boxplot() +
+    geom_point(alpha = 0.25, shape = 21) +
+    geom_line(aes(group = samples), alpha = 0.25) +
+    theme_classic() +
+    theme(
+      legend.position = "none",
+      strip.text.y = ggplot2::element_text(angle = -90, size = 10),
+      panel.grid.minor.x = ggplot2::element_blank(),
+      panel.grid.major.x = ggplot2::element_blank()) +
+    geom_line(data = summary, aes(group = 1), linetype = 2, colour = "red") +
+    labs(x = "step")
+
 }
 
-# Remove chimeras
-message("removing chimeras")
-seqtab <- dada2::removeBimeraDenovo(
-  seqtab_all,
-  method = config[["chimera_method"]],
-  minSampleFraction = config[["minSampleFraction"]],
-  ignoreNNegatives = config[["ignoreNNegatives"]],
-  minFoldParentOverAbundance = config[["minFoldParentOverAbundance"]],
-  allowOneOf = config[["allowOneOf"]],
-  minOneOffParentDistance = config[["minOneOffParentDistance"]],
-  maxShift = config[["maxShift"]],
-  multithread = as.numeric(arguments$cores))
+ggsave(
+  filename = arguments$nreads_fig,
+  plot = make_plot(stats) + labs("# reads") +
+   scale_y_continuous(labels = scales::comma_format(1)),
+  width = 6,
+  height = 4,
+  units = "in")
 
-fs::dir_create(dirname(arguments$asv_merged_file))
-qs::qsave(seqtab, arguments$asv_merged_file)
-
-out <- tibble::tibble(samples = row.names(seqtab),
-  nonchim = rowSums(seqtab))
-
-fs::dir_create(dirname(arguments$summary_file))
-out %>%
-  readr::write_tsv(arguments$summary_file)
-
-fs::dir_create(dirname(arguments$fig_file))
-
-outmat <- seqtab[, seq_len(min(1e4, ncol(seqtab)))]
-outmat <- ifelse(outmat > 0, 1, 0)
-cols <- structure(c("black", "white"), names = c("1", "0"))
-
-annot <- ComplexHeatmap::rowAnnotation(
-  df = sample_table %>%
-    select(batch, key) %>%
-    as.data.frame() %>%
-    column_to_rownames("key"),
-  annotation_legend_param = list(
-    batch = list(direction = "horizontal")))
-
-png(filename = arguments$fig_file, width = 10, height = 8, units = "in",
-  res = 1200)
-hm <- ComplexHeatmap::Heatmap(outmat,
-  left_annotation = annot,
-  col = cols, name = "a", show_row_dend = FALSE, show_row_names = FALSE,
-  show_column_dend = FALSE, show_column_names = FALSE,
-  cluster_columns = FALSE, cluster_rows = FALSE,
-  show_heatmap_legend = FALSE, use_raster = TRUE,
-  column_title = "Top 10K ASVs",
-  heatmap_legend_param = list(direction = "horizontal"))
-draw(hm, annotation_legend_side = "top", heatmap_legend_side = "top",
-  merge_legend = TRUE)
-dev.off()
+ggsave(
+  filename = arguments$preads_fig,
+  plot = make_plot(rel_stats) + labs(y = "relative change") +
+    scale_y_continuous(labels = scales::percent_format(1)),
+  width = 6,
+  height = 4,
+  units = "in")

@@ -24,7 +24,7 @@ rule filter_and_trim_sample:
 
 rule learn_error_rates_batch_end:
   input:
-    filtered = lambda wc: temp(expand("output/dada2/filtered/{sample}_filtered_{end}.fastq.gz", sample = get_batch_samples(sample_table, wc.batch), end = ["R1", "R2"]))
+    filtered = lambda wc: expand("output/dada2/filtered/{sample}_filtered_{end}.fastq.gz", sample = get_batch_samples(sample_table, wc.batch), end = wc.end)
   output:
     mat = "output/dada2/model/{batch}_error_rates_{end}.qs",
     plot = "workflow/report/model/{batch}_error_rates_{end}.png"
@@ -59,8 +59,8 @@ def get_error_matrix(wc, sample_table, end):
 
 rule dereplicate_sample:
   input:
-    filt_end1 = lambda wc: temp(get_filtered_files(wc, "R1")),
-    filt_end2 = lambda wc: temp(get_filtered_files(wc, "R2")),
+    filt_end1 = lambda wc: get_filtered_files(wc, "R1"),
+    filt_end2 = lambda wc: get_filtered_files(wc, "R2"),
     mat_end1 = lambda wc: get_error_matrix(wc, sample_table, "R1"),
     mat_end2 = lambda wc: get_error_matrix(wc, sample_table, "R2")
   output:
@@ -74,22 +74,23 @@ rule dereplicate_sample:
     "logs/dada2/03_{batch}_{sample}_merge.log"
   shell:
     """
-      if [[ ! -s {filt.end1} && ! -s {filt.end2} ]]; then
+      if [[ -e {input.filt_end1} && -e {input.filt_end2} && ! -s {input.filt_end1} && ! -s {input.filt_end2} ]]; then
           touch {output.merge} 
-          echo "Filtered files have no reads:"
-          ls {filt.end1} {filt.end2}
-          echo "Generating placeholder faux output: {output.merge}"
+          echo "Filtering succeeded, but no reads were left after filtering:"
+          ls -l {input.filt_end1} {input.filt_end2}
+          echo "Generating placeholder output file: {output.merge}"
       else 
         Rscript workflow/scripts/dada2/dereplicate_one_sample_pair.R \
         {output.merge} {params.sample_name} \
         {input.filt_end1} {input.filt_end2} \
         --end1_err={input.mat_end1} --end2_err={input.mat_end2} \
         --log={log} --batch={params.batch} --config={params.config}
-      fi"""
+      fi
+      """
 
 rule dereplicate_batch:
   input:
-    derep = lambda wc: temp(expand("output/dada2/merge/{batch}/{sample}_asv.qs", sample = get_batch_samples(sample_table, wc.batch), batch = wc.batch))
+    derep = lambda wc: expand("output/dada2/merge/{batch}/{sample}_asv.qs", sample = get_batch_samples(sample_table, wc.batch), batch = wc.batch)
   output:
     asv = "output/dada2/asv_batch/{batch}_asv.qs",
     summary = "output/dada2/asv_batch/{batch}_summary.tsv"

@@ -19,7 +19,7 @@ rule filter_and_trim_sample:
       --batch={params.batch} --log={log} --config={params.config}
       
       if [[ -s {output.summary} && ! -s {output.end1} && ! -s {output.end2} ]]; then
-        echo "Filtering succeeded but all reads were removed. Creating temp placeholder files."
+        echo "\n\nFiltering succeeded but all reads were removed. Creating temp placeholder files." >> {log}
         touch {output.end1}
         touch {output.end2}
       fi
@@ -79,9 +79,9 @@ rule dereplicate_sample:
     """
       if [[ -e {input.filt_end1} && -e {input.filt_end2} && ! -s {input.filt_end1} && ! -s {input.filt_end2} ]]; then
           touch {output.merge} 
-          echo "Filtering succeeded, but no reads were left after filtering:"
-          ls -l {input.filt_end1} {input.filt_end2}
-          echo "Generating placeholder output file: {output.merge}"
+          echo "Filtering succeeded, but no reads were left after filtering:" > {log}
+          ls -l {input.filt_end1} {input.filt_end2} >> {log}
+          echo "Generating placeholder output file: {output.merge}" >> {log}
       else 
         Rscript workflow/scripts/dada2/dereplicate_one_sample_pair.R \
         {output.merge} {params.sample_name} \

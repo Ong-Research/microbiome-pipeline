@@ -33,6 +33,7 @@ install.packages("patchwork")
 install.packages("ggraph")
 install.packages("ggdist")
 install.packages("ggtext")
+install.packages("tidytext")
 devtools::install_github("teunbrand/ggh4x")
 
 # tables

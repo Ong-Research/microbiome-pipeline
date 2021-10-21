@@ -123,6 +123,8 @@ sample_meta %<>%
       } else {
         .x
       }} ) %>% unlist)
+# we may have duplicates for mom sids
+sample_meta %<>% distinct()
 
 # now map negative controls to batch and plate
 negcontrol_tb = dplyr::filter(sample_meta, sample_type=="NEC") %>%
@@ -158,3 +160,11 @@ qs::qsave(negcontrol_map, arguments$out_control)
 sample_meta %>%
   dplyr::select(-seq_id, -mapping) %>%
   qs::qsave(arguments$out_meta)
+
+# output tsv
+if (grepl("\\.qs$", arguments$out_meta)) {
+  out_txt = gsub("\\.qs", ".tsv", arguments$out_meta)
+  sample_meta %>%
+    dplyr::select(-seq_id, -mapping) %>%
+    write_tsv(out_txt)
+}

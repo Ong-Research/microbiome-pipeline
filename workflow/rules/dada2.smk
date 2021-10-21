@@ -183,7 +183,7 @@ rule collect_summary:
     fig_step = "workflow/report/dada2qc/dada2steps_vs_abundance.png",
     fig_step_rel = "workflow/report/dada2qc/dada2steps_vs_relabundance.png"
   log:
-    "logs/dada2/08_summarize_stats.txt"
+    "logs/dada2/08_summarize_stats.log"
   shell:
     """Rscript workflow/scripts/dada2/summarize_nreads.R \
       {output.nreads} {output.fig_step} {output.fig_step_rel} \

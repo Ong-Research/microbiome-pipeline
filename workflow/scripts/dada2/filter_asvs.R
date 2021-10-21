@@ -36,7 +36,7 @@ if (interactive()) {
   arguments$seqlength_fig <- "sl.png"
   arguments$abundance_fig <- "sa.png"
   arguments$asv_matrix_file <- "output/dada2/remove_chim/asv_mat_wo_chim.qs"
-  arguments$negcontrol_file <- "data/negcontrols.qs"
+  arguments$negcontrol_file <- "data/negcontrol.qs"
 
 }
 
@@ -83,6 +83,11 @@ if (arguments$lysis) {
 neg_controls %<>%
   dplyr::select(batch, key, kits)
 
+# only look at samples that
+# are in the input matrix
+neg_controls %<>%
+  dplyr::filter(key %in% rownames(seqtab))
+
 subtract_neg_control <- function(name, neg_controls, seqtab, prop) {
 
   negs <- neg_controls
@@ -118,8 +123,8 @@ to_remove <- dplyr::filter(neg_controls,
   purrr::map_lgl(sample_vec, ~ !is.null(.$error)))
 
 if (nrow(to_remove) > 0) {
-  message("removed the samples:\n",
-    stringr::str_c(to_remove$name, collapse = "\n"))
+  message(sprintf("removed %d samples:\n", nrow(to_remove)),
+    stringr::str_c(to_remove$key, collapse = ", "))
 }
 
 neg_controls %<>%

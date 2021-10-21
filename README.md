@@ -135,9 +135,9 @@ Now you will edit `config.yaml` to set up running parameters. At the minimum, yo
 
     Next, inspect those profiles. You may want to use them to decide where you want to trim R1 and R2 and how to set minimum overlap. 
 
-3. **Edit filter_and_trim and merge_pairs parameters.** and choose filter_and_trim and merge_pairs parameters for each batch. Keep in mind the length of your 16S region (eg, the V4 region is 252 bp long) and whether you will have enough overlap after trimming. Look up other `dada2` resources for advice on how to choose these parameters.
+3. **Edit parameters for each batch.** Check the `config.yaml` file for the default filter_and_trim, merge_pairs, and qc_parameters specifications for each batch. Keep in mind the length of your 16S region (eg, the V4 region is 252 bp long) and whether you will have enough overlap after trimming. Look up other `dada2` resources for more advice on how to choose these parameters.
 
-    Edit the config.yaml file. Here is an example for a 2x150 MiSeq run targeting the V4 region. This set of parameters keeps only full-length reads and requires an overlap of 25 base pairs.
+    Here is an example for a 2x150 NextSeq run targeting the V4 region. This set of parameters keeps only full-length reads and requires an overlap of 25 base pairs. Because the V4 region is only ~252 base pairs long, we suspect that ASVs that are outside of that range may be bimeras. 
 
     ```txt
     filter_and_trim:
@@ -153,13 +153,49 @@ Now you will edit `config.yaml` to set up running parameters. At the minimum, yo
 
     ...
 
-    # dada2 merge pairs
     merge_pairs:
         batch01:
             minOverlap: 25
             maxMismatch: 0
+
+    ...
+
+    qc_parameters:
+        negctrl_prop: 0.5
+        max_length_variation: 5
+        low_abundance_perc: 0.0001 
     ```
-  
+
+
+    The defaults provided in the pipeline are from a 2x300 run targeting V3-V4. Here we are truncating the ends of both reads because we noticed a significant loss of quality. 
+    Because we have longer reads, we can require more overlap.
+
+    ```txt
+    filter_and_trim:
+        dust_dec2018:
+            truncQ: 12
+            truncLen: [280, 250]
+            trimLeft: 0
+            trimRight: 0
+            maxLen: Inf
+            minLen: 100
+            maxN: 0
+            minQ: 0
+            maxEE: [2, 2]
+    ....
+
+    merge_pairs:
+        dust_dec2018:
+        minOverlap: 50
+        maxMismatch: 0
+
+    ...
+
+    qc_parameters:
+        negctrl_prop: 0.5
+        max_length_variation: 50
+        low_abundance_perc: 0.0001 
+    ```
 
 ## Workflow commands
 

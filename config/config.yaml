@@ -68,7 +68,7 @@ remove_chimeras:
 # low_abundance_perc: min percentage of total_reads in an ASV
 qc_parameters:
   negctrl_prop: 0.5
-  max_length_variation: 50
+  max_length_variation: 5
   low_abundance_perc: 0.0001 
 
 # downloaded from https://benlangmead.github.io/aws-indexes/k2

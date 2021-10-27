@@ -197,16 +197,46 @@ Now you will edit `config.yaml` to set up running parameters. At the minimum, yo
         low_abundance_perc: 0.0001 
     ```
 
+## Download references for sequence classification
+
+Databases need to be downloaded from <https://benlangmead.github.io/aws-indexes/k2>.
+These are the four used by default in the config file. 
+
+Here is an example of doing this using `wget`:
+
+```
+# download references
+wdir="https://genome-idx.s3.amazonaws.com/kraken"
+refdir="data/kraken_dbs"
+mkdir -p $refdir
+
+greengenes="16S_Greengenes13.5_20200326"
+rdp="16S_RDP11.5_20200326"
+silva="16S_Silva138_20200326"
+minikraken="minikraken2_v2_8GB_201904"
+
+for db in $greengenes $rdp $silva $minikraken;
+do
+    remote=${wdir}/${db}.tgz
+    local=${refdir}/${db}.tgz
+    wget $remote -O $local
+    tar -xzf ${local} -C ${refdir}
+done
+```
+
 ## Workflow commands
 
 Replace `{cores}` with the maximum number of cores that you want
 to be used at one time.
 
+The rules `taxonomy` and `phylotree` will take a little longer the first
+time they are run because they install conda environments.
+
 * `snakemake -j{cores}` runs everything
 * `snakemake -j{cores} sequence_qc` plots quality profiles, and build a `multiqc` report
-* `snakemake -j{cores} dada2` computes the ASV matrix from the different batches
-* `snakemake -j{cores} all_taxonomy_kraken` to labels the ASV sequences with [kraken2](https://ccb.jhu.edu/software/kraken2/). Databases need to be downloaded from <https://benlangmead.github.io/aws-indexes/k2>
-* `snakemake -j{cores} phylotree` computes the phylogenetic tree using `qiime2`'s FastTree
+* `snakemake -j{cores} [--nt] dada2` computes the ASV matrix from the different batches (use --nt option to keep intermediate files for troubleshooting)
+* `snakemake -j{cores} taxonomy --use-conda` to labels the ASV sequences with [kraken2](https://ccb.jhu.edu/software/kraken2/). Databases need to be downloaded in advance from <https://benlangmead.github.io/aws-indexes/k2>
+* `snakemake -j{cores} phylotree --use-conda` computes the phylogenetic tree using `qiime2`'s FastTree
 * `snakemake -j{cores} mia` prepare the `TreeSummarizedExperiment` containing all the data generated
 
 ![microbiome_pipeline](microbiome.png)

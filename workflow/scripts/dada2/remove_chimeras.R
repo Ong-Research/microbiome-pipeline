@@ -12,7 +12,7 @@ remove_chimeras.R --version
 
 Options:
 -h --help    show this screen
---log=<logfile>    name of the log file [default: filter_and_trim.log]
+--log=<logfile>    name of the log file [default: remove_chimeras.log]
 --config=<cfile>    name of the yaml file with the parameters [default: ./config/config.yaml]
 --cores=<cores>    number of CPUs for parallel processing [default: 24]" -> doc
 
@@ -103,11 +103,18 @@ outmat <- seqtab[, seq_len(min(1e4, ncol(seqtab)))]
 outmat <- ifelse(outmat > 0, 1, 0)
 cols <- structure(c("black", "white"), names = c("1", "0"))
 
-annot <- ComplexHeatmap::rowAnnotation(
-  df = sample_table %>%
+
+# put row annotation in same order as matrix
+# will remove samples that were completely empty
+# after filter_and_trim
+anno_df <- sample_table %>%
     select(batch, key) %>%
     as.data.frame() %>%
-    column_to_rownames("key"),
+    column_to_rownames("key")
+anno_df <- anno_df[rownames(outmat), , drop = F]
+
+annot <- ComplexHeatmap::rowAnnotation(
+  df = anno_df,
   annotation_legend_param = list(
     batch = list(direction = "horizontal")))
 

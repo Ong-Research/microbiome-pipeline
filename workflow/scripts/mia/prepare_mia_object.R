@@ -92,7 +92,7 @@ cdata <- meta %>%
 
 out <- TreeSummarizedExperiment::TreeSummarizedExperiment(
   assays = list(counts = t(asv)),
-  colData = cdata,
+  colData = cdata[rownames(asv), ], # need to make sure correct order
   rowData = asv_aux %>%
     dplyr::left_join(taxa, by = "asv") %>%
     as.data.frame() %>%

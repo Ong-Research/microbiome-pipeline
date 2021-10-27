@@ -63,7 +63,7 @@ rule dada2:
       batch = batches, sample = all_samples, allow_missing = True),
     expand("output/dada2/asv_batch/{batch}_asv.qs", batch = batches),
     expand("output/dada2/asv_batch/{batch}_summary.tsv", batch = batches),
-    "output/dada2/after_qc/asv_mat_wo_chim.qs"
+    "output/dada2/after_qc/asv_mat_wo_chim.qs",
     "workflow/report/dada2qc/asv_matrix_wo_chim.png",
     "workflow/report/dada2qc/nasvs_by_seqlength.png",
     "workflow/report/dada2qc/nasvs_by_seqabundance.png",

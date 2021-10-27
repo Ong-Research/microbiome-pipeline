@@ -3,8 +3,8 @@ rule filter_and_trim_sample:
     end1 = lambda wc: sample_dict[wc.sample]["end1"],
     end2 = lambda wc: sample_dict[wc.sample]["end2"]
   output:
-    end1 = "output/dada2/filtered/{sample}_filtered_R1.fastq.gz",
-    end2 = "output/dada2/filtered/{sample}_filtered_R2.fastq.gz",
+    end1 = temp("output/dada2/filtered/{sample}_filtered_R1.fastq.gz"),
+    end2 = temp("output/dada2/filtered/{sample}_filtered_R2.fastq.gz"),
     summary = "output/dada2/summary/{sample}_summary_filtered.tsv"
   params:
     config = "config/config.yaml",
@@ -16,11 +16,18 @@ rule filter_and_trim_sample:
     """Rscript workflow/scripts/dada2/filter_and_trim.R \
       {output.end1} {output.end2} {output.summary} \
       {params.sample_name} --end1={input.end1} --end2={input.end2} \
-      --batch={params.batch} --log={log} --config={params.config}"""
+      --batch={params.batch} --log={log} --config={params.config}
+      
+      if [[ -s {output.summary} && ! -s {output.end1} && ! -s {output.end2} ]]; then
+        echo "Filtering succeeded but all reads were removed. Creating temp placeholder files."
+        touch {output.end1}
+        touch {output.end2}
+      fi
+      """
 
 rule learn_error_rates_batch_end:
   input:
-    filtered = lambda wc: expand("output/dada2/filtered/{sample}_filtered_{end}.fastq.gz", sample = get_batch_samples(sample_table, wc.batch), end = ["R1", "R2"])
+    filtered = lambda wc: expand("output/dada2/filtered/{sample}_filtered_{end}.fastq.gz", sample = get_batch_samples(sample_table, wc.batch), end = wc.end)
   output:
     mat = "output/dada2/model/{batch}_error_rates_{end}.qs",
     plot = "workflow/report/model/{batch}_error_rates_{end}.png"
@@ -60,20 +67,29 @@ rule dereplicate_sample:
     mat_end1 = lambda wc: get_error_matrix(wc, sample_table, "R1"),
     mat_end2 = lambda wc: get_error_matrix(wc, sample_table, "R2")
   output:
-    merge = "output/dada2/merge/{batch}/{sample}_asv.qs"
+    merge = temp("output/dada2/merge/{batch}/{sample}_asv.qs")
   params:
     config = "config/config.yaml",
     sample_name = lambda wc: wc.sample,
     batch = lambda wc: sample_dict[wc.sample]["batch"]
   threads: 1
   log:
-    "logs/dada2/03_{batch}_{sample}_merge.txt"
+    "logs/dada2/03_{batch}_{sample}_merge.log"
   shell:
-    """Rscript workflow/scripts/dada2/dereplicate_one_sample_pair.R \
-      {output.merge} {params.sample_name} \
-      {input.filt_end1} {input.filt_end2} \
-      --end1_err={input.mat_end1} --end2_err={input.mat_end2} \
-      --log={log} --batch={params.batch} --config={params.config}"""
+    """
+      if [[ -e {input.filt_end1} && -e {input.filt_end2} && ! -s {input.filt_end1} && ! -s {input.filt_end2} ]]; then
+          touch {output.merge} 
+          echo "Filtering succeeded, but no reads were left after filtering:"
+          ls -l {input.filt_end1} {input.filt_end2}
+          echo "Generating placeholder output file: {output.merge}"
+      else 
+        Rscript workflow/scripts/dada2/dereplicate_one_sample_pair.R \
+        {output.merge} {params.sample_name} \
+        {input.filt_end1} {input.filt_end2} \
+        --end1_err={input.mat_end1} --end2_err={input.mat_end2} \
+        --log={log} --batch={params.batch} --config={params.config}
+      fi
+      """
 
 rule dereplicate_batch:
   input:
@@ -113,7 +129,7 @@ rule remove_chimeras:
 rule filter_asvs:
   input:
     seqtab = "output/dada2/remove_chim/asv_mat_wo_chim.qs",
-    negcontrol = "data/negcontrols.qs"
+    negcontrol = config["negcontroltable"] # "data/negcontrols.qs"
   output:
     plot_seqlength = "workflow/report/dada2qc/nasvs_by_seqlength.png",
     plot_seqabundance = "workflow/report/dada2qc/nasvs_by_seqabundance.png",

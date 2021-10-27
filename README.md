@@ -241,16 +241,6 @@ time they are run because they install conda environments.
 
 ![microbiome_pipeline](microbiome.png)
 
-## Adding workflowr 
-
-You can also use `workflowr` to track and render your Rmarkdown into HTML for you.
-Let's assume you are already keeping the code from this pipeline in a git repository. Go up one step from your repository and have  `workflowr` set it up for you:
-
-```
-library(workflowr)
-wflow_start("/path/to/repo", existing=T)
-```
-
 ## Cite
 
 ### dada2

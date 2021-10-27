@@ -12,7 +12,7 @@ rule extract_fasta:
       {output.fasta} {input.asv} \
       --prefix={params.prefix} --log={log}"""
 
-rule kraken_taxnomy:
+rule kraken_taxonomy:
   input:
     fasta = "output/taxa/fasta/asv_sequences.fa",
     ref = lambda wc: config["kraken_dbs"][wc.ref]
@@ -24,7 +24,7 @@ rule kraken_taxnomy:
   threads:
     config["threads"]
   conda:
-    "../envs/kraken.yaml"
+    "../envs/kraken.yaml" # relative to workflow/rules/
   params:
     confidence = config["kraken_confidence"]
   log:

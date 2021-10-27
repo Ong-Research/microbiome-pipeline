@@ -103,7 +103,7 @@ rule mia:
     asv = "output/dada2/after_qc/asv_mat_wo_chim.qs",
     taxa = "output/taxa/kraken/minikraken/kraken_taxatable.qs",
     tree = "output/phylotree/newick/tree.nwk",
-    meta = "data/meta.tsv"
+    meta = config["metadata"]
   output:
     mia = "output/mia/mia_object.qs"
   params:

@@ -1,9 +1,12 @@
 #!/usr/local/bin/Rscript
 
-#' Subtract p% of the negative controls reads of the ASV matrix
+#' - Subtract p% of the negative controls reads of the ASV matrix
+#' - Filters ASVs outside of a length range
+#' - Removes samples with too few reads or too few ASVs
 #' @author rwelch2
 
-"Filters the low quality ASVs
+"Filters the low quality ASVs based on negative control and length.
+Option to remove samples with very little data remaining afterward.
 
 Usage:
 filter_asvs.R [<asv_matrix_qc> <seqlength_fig> <abundance_fig>] [<asv_matrix_file> <negcontrol_file>] [--lysis --log=<logfile> --config=<cfile> --cores=<cores>]
@@ -214,9 +217,26 @@ min_reads_per_asv <- ceiling(config[["low_abundance_perc"]] / 100 *
 seqtab_abundance <- colSums(seqtab_new)
 
 message("removing ASV with < ", min_reads_per_asv, " reads")
-message("in total ", sum(seqtab_abundance < min_reads_per_asv))
+message("in total removing ", sum(seqtab_abundance < min_reads_per_asv))
 seqtab_new <- seqtab_new[, seqtab_abundance >= min_reads_per_asv]
 
+
+message("Filtering samples with too little data remaining")
+sample_tot <- rowSums(seqtab_new)
+rem_by_tot <- (sample_tot < config[["min_reads_per_sample"]])
+message("Identified ", sum(rem_by_tot), 
+  " samples with fewer than ", config[["min_reads_per_sample"]], " total count")
+
+sample_n_asv <- rowSums(seqtab_new>0)
+rem_by_n_asv <- (sample_n_asv < config[["min_asvs_per_sample"]])
+message("Identified ", sum(rem_by_n_asv), 
+  " samples with fewer than ", config[["min_asvs_per_sample"]], " ASVs")
+
+n_to_rem <- (rem_by_tot | rem_by_n_asv) %>% .[.] %>% length
+message("Removing ", n_to_rem, " samples.")
+
+keepers <- (!rem_by_tot & !rem_by_n_asv) 
+seqtab_new <- seqtab_new[keepers, ]
 
 message("saving files in ", arguments$asv_matrix_qc)
 qs::qsave(seqtab_new, arguments$asv_matrix_qc)

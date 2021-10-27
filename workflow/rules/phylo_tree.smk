@@ -39,4 +39,8 @@ rule export_tree:
   shell:
     """qiime tools export \
       --input-path {input.root_tree} \
-      --output-path {output.newick_tree}"""
+      --output-path output/phylotree/newick
+    """
+    # this will make a directory newick/tree.nwk that contains
+    # a file tree.nwk... we don't need that
+      #--output-path {output.newick_tree}"""

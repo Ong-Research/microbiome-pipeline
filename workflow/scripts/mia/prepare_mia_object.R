@@ -39,7 +39,7 @@ if (interactive()) {
   arguments$taxa <- "output/taxa/kraken/minikraken/kraken_taxatable.qs"
   arguments$tree <- "output/phylotree/newick/tree.nwk"
   arguments$meta <- "data/meta.tsv"
-  arguments$asv_prefix <- "HSD2M"
+  arguments$asv_prefix <- "asv" # "HSD2M"
 
 }
 
@@ -86,13 +86,20 @@ asv_aux <- tibble::tibble(asv = colnames(asv))
 # need to fix parse_taxa to return a tibble of length 
 # equal to all the sequences and not only the sequences with known information
 
+# We may have samples that didn't make it into the 
+# ASV matrix but were in the metadata file.
 cdata <- meta %>%
   as.data.frame() %>%
   tibble::column_to_rownames("key")
 
+# detect nonempty samples
+nonempty = rowSums(asv) %>% .[. > 0] %>% names
+asv = asv[nonempty, ]
+cdata = cdata[nonempty, ]
+
 out <- TreeSummarizedExperiment::TreeSummarizedExperiment(
   assays = list(counts = t(asv)),
-  colData = cdata,
+  colData = cdata, # need to make sure same keys
   rowData = asv_aux %>%
     dplyr::left_join(taxa, by = "asv") %>%
     as.data.frame() %>%
@@ -101,8 +108,21 @@ out <- TreeSummarizedExperiment::TreeSummarizedExperiment(
 
 bpp <- BiocParallel::MulticoreParam(workers = as.numeric(arguments$cores))
 
+# filter asvs
+tmpnames = counts(out) %>% rowSums %>% .[. > 0] %>% names
+
+# identify samples with fewer than N species
+outct = out %>% counts 
+outct[outct>0]=1
+tmpsamp = colSums(outct) %>% .[.>1] %>% names
+
 message("estimate diversity")
-out <- mia::estimateDiversity(out, abund_values = "counts", BPPARAM = bpp)
+metrics = c("coverage","gini_simpson", "inverse_simpson",
+    "log_modulo_skewness", "shannon", "fisher")
+    #[tmpnames, tmpsamp 
+blah <- mia::estimateDiversity(out[,tmpsamp], abund_values = "counts",
+  BPPARAM = bpp)
+  #BPPARAM = SerialParam(), index = metrics) #, BPPARAM = bpp)
 
 message("estimate richness")
 out <- mia::estimateRichness(out, abund_values = "counts", BPPARAM = bpp)

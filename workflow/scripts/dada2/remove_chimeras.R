@@ -111,7 +111,7 @@ anno_df <- sample_table %>%
     select(batch, key) %>%
     as.data.frame() %>%
     column_to_rownames("key")
-anno_df <- anno_df[rownames(outmat), , drop=F]
+anno_df <- anno_df[rownames(outmat), , drop = F]
 
 annot <- ComplexHeatmap::rowAnnotation(
   df = anno_df,

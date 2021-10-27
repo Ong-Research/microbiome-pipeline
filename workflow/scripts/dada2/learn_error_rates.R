@@ -44,7 +44,7 @@ if (interactive()) {
 
   arguments$error_rates <- "error_rate_matrix.qs"
   arguments$plot_file <- "error_rates.png"
-  arguments$batch <- "dust_dec2019"
+  arguments$batch <- "batch2018"
   arguments$filtered <- readr::read_tsv("samples.tsv") %>%
     filter(batch == arguments$batch) %>%
     pull(key)
@@ -60,8 +60,18 @@ stopifnot(file.exists(arguments$config))
 
 info <- Sys.info();
 print(stringr::str_c(names(info), " : ", info, "\n"))
-
 print(arguments)
+
+
+# Identify and remove empty files.
+# These are placeholder files that were created
+# to appease snakemake after all reads were
+# filtered out from the input file.
+# stop if we have no files left after checking for empty.
+sizes <- lapply(arguments$filtered, FUN = function(x) file.info(x)$size)
+sizes <- setNames(sizes, arguments$filtered)
+nonempty <- names(sizes[sizes > 0])
+stopifnot(length(nonempty) > 0)
 
 message("loading packages")
 library(dada2)
@@ -86,7 +96,8 @@ if (!is.null(arguments$batch)) {
 
 print("computing error rates")
 errs <- dada2::learnErrors(
-  arguments$filtered, nbases = as.numeric(config$learn_nbases),
+  nonempty, #arguments$filtered,
+  nbases = as.numeric(config$learn_nbases),
   multithread = as.numeric(arguments$cores), randomize = TRUE)
   
 fs::dir_create(dirname(arguments$error_rates))

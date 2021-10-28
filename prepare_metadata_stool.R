@@ -8,15 +8,17 @@
 "Prepares metadata table and negative control mapping table.
 
 Usage:
-prepare_metadata_stool.R [options] [--mapping <mapping_table>...]
+prepare_metadata_stool.R [options] [--mapping <mapping_table>... --table <input>]
 prepare_metadata_stool.R (-h|--help)
 prepare_metadata_stool.R --version
 
 Options:
 --out_meta=<out_metadata>    Name for output metadata filename [default: data/meta.qs]
 --out_control=<out_control>  Name for output negative control mapping file [default: data/negcontrol.qs]
+--out_reps=<out_reps>        Name for output replicate table [default: data/replicates.tsv]
 --samples=<sample_table>     Name of the file with the samples table [default: samples.tsv]
 --mapping=<mapping_table>    Name of file with sample to plate mapping info.
+--table=<input_metadata>     Name of an input metadata table file to merge.
 --in_data=<data>             Name of input metadata file with R1/R2 filenames [default: data/sample_info.csv]" -> 
   doc
   
@@ -26,7 +28,8 @@ my_args <- commandArgs(trailingOnly = TRUE)
 
 if (interactive()) {
   my_args=c(my_args, c("--mapping", "data/Nextseq_04202018_mapping_WISC.txt",
-    "--mapping", "data/Nextseq_190826_mapping_WISC.txt"))
+    "--mapping", "data/Nextseq_190826_mapping_WISC.txt",
+    "--table", "data/big_metadata.qs"))
 }
 
 arguments <- docopt(doc, args = my_args,
@@ -62,7 +65,7 @@ sample_table %<>%
   tidyr::separate(end1_base, into = c("sample_name"), sep = "_R", remove = F)
 
 get_sampletype <- function(seq_id) {
-  if (grepl("^V", seq_id)) {
+  if (grepl("^V|VGSWAB", seq_id)) {
     "VGSWAB00"
   } else if (grepl("STOOL12", seq_id)) {
     "STOOL09_12"
@@ -85,6 +88,7 @@ mapping_tb <- purrr::map(arguments$mapping,
   dplyr::rename(map_id = `#SampleID`) %>%
   dplyr::mutate(sample_type = purrr::map(
       map_id, get_sampletype) %>% unlist) 
+
 # keep only things we need for this analysis
 mapping_tb %<>%
   dplyr::select(map_id, sample_type, mapping, PrimerPlate, PrimerWell)
@@ -94,13 +98,14 @@ sample_info <- read_file(arguments$in_data)
 sample_info %<>%
   dplyr::mutate(across(c(R1, R2), basename, .names = "{.col}_base")) %>%
   dplyr::transmute(
-     baby_sid = Subject,
+     subj_id = Subject,
      flag_reads,
      R1_base, 
-     seq_id = SeqID)
+     seq_id = SeqID) %>%
+  distinct()
 
 # start with sample table, then map in mapping table
-sample_meta = sample_table %>%
+sample_meta <- sample_table %>%
   dplyr::select(batch, key, end1_base, end2_base) %>%
   tidyr::separate(end1_base, into = c("map_id"), sep="_", remove=F) %>%
   dplyr::mutate(map_id = purrr::map2(map_id, batch,
@@ -113,18 +118,44 @@ sample_meta = sample_table %>%
   left_join(sample_info, 
     by = c("end1_base" = "R1_base")) 
 
-#ugggh
-# fill in missing baby sids
+stopifnot(nrow(sample_meta) == nrow(sample_table))
+
+# get subject IDs, which can be baby or mom sids
 sample_meta %<>%
-  dplyr::mutate(baby_sid = 
-    purrr::map2(baby_sid, map_id,
+  dplyr::mutate(subj_id = 
+    purrr::map2(subj_id, map_id,
       ~{if (is.na(.x)) {
           str_match(.y, "(\\d{4}).*")[,2]
       } else {
         .x
       }} ) %>% unlist)
-# we may have duplicates for mom sids
-sample_meta %<>% distinct()
+stopifnot(nrow(sample_meta) == nrow(sample_table))
+
+# At this point we will add in more SID metadata
+# there are some mom sids with multiple baby_sids
+# so we'll have to make it a list
+metas = tibble()
+if (!is.null(arguments$table)) {
+  metas <- read_file(arguments$table)
+  
+  # for mom_sids, remove 
+  # any baby-specific features.
+  mom_meta <- metas %>%
+    dplyr::select(-baby_sid, -sex, -matches("shotgun|02")) %>%
+    distinct() %>%
+    dplyr::mutate(subj_id = mom_sid)
+  re_metas <- metas %>%
+    mutate(subj_id = baby_sid) %>%
+    bind_rows(mom_meta)
+
+  full_sample_meta <- sample_meta %>%
+    dplyr::mutate(mom_sid = round(as.integer(subj_id), -1) %>%
+      as.character) %>%
+    left_join(re_metas)
+  stopifnot(nrow(sample_meta) == nrow(full_sample_meta))
+
+  sample_meta <- full_sample_meta
+}
 
 # now map negative controls to batch and plate
 negcontrol_tb = dplyr::filter(sample_meta, sample_type=="NEC") %>%
@@ -153,18 +184,30 @@ negcontrol_map = sample_meta %>%
 qs::qsave(negcontrol_map, arguments$out_control)
 
 
+# define replicates
+# take the first one as the main sample
+# we will merge the other one into it
+main_key <- sample_meta %>%
+  dplyr::select(key, subj_id, sample_type, seq_id) %>%
+  dplyr::group_by(subj_id, sample_type) %>%
+  dplyr::slice_min(order_by = seq_id) %>%
+  dplyr::transmute(main_key = key, subj_id, sample_type)
+rep_tb <- sample_meta %>%
+  dplyr::select(key, subj_id, sample_type) %>%
+  left_join(main_key)
+qs::qsave(rep_tb, arguments$out_reps)
+
+
 #################
-# Get whatever metadata we want to put into the 
-# output file
-# ugh maybe I just do the basic one now and update it later
+# save metadata table
 sample_meta %>%
-  dplyr::select(-seq_id, -mapping) %>%
+  #dplyr::select(-seq_id, -mapping) #%>%
   qs::qsave(arguments$out_meta)
 
 # output tsv
 if (grepl("\\.qs$", arguments$out_meta)) {
   out_txt = gsub("\\.qs", ".tsv", arguments$out_meta)
   sample_meta %>%
-    dplyr::select(-seq_id, -mapping) %>%
+    #dplyr::select(-seq_id, -mapping) %>%
     write_tsv(out_txt)
 }

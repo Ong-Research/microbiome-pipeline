@@ -2,8 +2,8 @@
 # DC 2021-10-11
 
 # don't forget to activate!!
-source .bashrc
-conda activate microbiome
+#source .bashrc
+#conda activate microbiome
 
 # quality control
 #snakemake -j8 sequence_qc

@@ -33,10 +33,8 @@ There are two steps to install the pipeline:
 
 ### Troubleshooting conda and environment variables
 
-If you have other versions of R and R user libraries elsewhere, 
-you might encounter some problems with environment variables and conda. 
-You may need to provide a local `.bashrc` file to 
-place the conda path at the beginning of your `$PATH` environment variable.
+If you have other versions of R and R user libraries elsewhere, you might encounter some problems with environment variables and conda. You may need to provide a local `.bashrc` file to place the conda path at the beginning of your `$PATH` environment variable.
+
 **You may not need to do this step.**
 
 ```sh
@@ -60,7 +58,7 @@ export PATH="/path/to/miniconda3/envs/microbiome/bin:$PATH"
 ## Set up data and metadata
 
 1. **Set up a data/ directory with one subdirectory per batch.** The pipeline will look in the `data/` directory to find subdirectories that contain `fastq.gz` files. You can specify different filtering and trimming parameters per batch, and `dada2` will learn error rates per batch. So, you may wish to separate your files by sequencing batch and/or by sample type.
-   
+
    ```sh
     mkdir data/
     mkdir data/batch01 [data/batch02 ... ]
@@ -80,15 +78,13 @@ export PATH="/path/to/miniconda3/envs/microbiome/bin:$PATH"
     Rscript ./prepare_sample_table.R
     ```
 
-    will generate the `samples.tsv` file that contains 4 columns separated by tabs (the file will not actually contain |) 
+    will generate the `samples.tsv` file that contains 4 columns separated by tabs (the file will not actually contain |)
 
     ```txt
     | batch | key | end1 | end2 |
     ```
 
-    
 3. **Set up sample metadata file.** This is where to link sample IDs to variables of interest to your study (condition, body site, time point, etc). **As currently implemented**, this is only used to augment the final TreeSummarizedExperiment file, which you will use for your own downstream analysis. You need to have a column `key` that matches the sample table. For example:
-
 
     ```txt
     | key | subject_id | body_site | time_point | ... 
@@ -111,9 +107,8 @@ export PATH="/path/to/miniconda3/envs/microbiome/bin:$PATH"
     Each element of `kits` is a character list of sample keys for negative control samples,
     eg `c("sample_141", "sample_142", "sample_143")`.
 
-
     The default path for this file is `data/negcontrols.qs`. If you have it named otherwise, edit the variable `negcontroltable` in `config/config.yaml` to point to your file.
-    
+
 ## Set up configuration file
 
 Now you will edit `config.yaml` to set up running parameters. At the minimum, you will need to make these edits:

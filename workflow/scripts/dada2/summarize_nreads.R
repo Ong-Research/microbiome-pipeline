@@ -55,7 +55,6 @@ message(stringr::str_c(names(info), " : ", info, "\n"))
 message("loading packages")
 library(magrittr)
 library(tidyverse)
-library(vroom)
 library(qs)
 
 stats <- list()
@@ -65,8 +64,6 @@ stats[[2]] <- readr::read_tsv(arguments$derep_summary_file)
 stats[[3]] <- qs::qread(arguments$final_asv_mat) %>%
   rowSums() %>%
   tibble::tibble(samples = names(.), nreads = .)
-
-#stats <- purrr::reduce(stats, purrr::partial(dplyr::inner_join, by = "samples"))
 
 # change to full join so we see input files that were lost during any step
 stats <- purrr::reduce(stats, purrr::partial(dplyr::full_join, by = "samples"))

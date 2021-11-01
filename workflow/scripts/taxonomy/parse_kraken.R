@@ -31,7 +31,8 @@ if (!interactive()) {
 if (interactive()) {
 
   arguments$taxa_table <- "output"
-  arguments$kraken_file <- "output/taxa/kraken/minikraken/kraken_results.out"
+  #arguments$kraken_file <- "output/taxa/kraken/minikraken/kraken_results.out"
+  arguments$kraken_file <- "output/taxa/kraken/silva/kraken_results.out"
 
 }
 

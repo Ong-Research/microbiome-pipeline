@@ -20,7 +20,8 @@ rule kraken_taxonomy:
     out = "output/taxa/kraken/{ref}/kraken_results.out",
     summary = "output/taxa/kraken/{ref}/kraken_summary.out",
     classified = "output/taxa/kraken/{ref}/kraken_asvs.classified",
-    unclassified = "output/taxa/kraken/{ref}/kraken_asvs.unclassified"
+    unclassified = "output/taxa/kraken/{ref}/kraken_asvs.unclassified",
+    mpa = "output/taxa/kraken/{ref}/kraken_mpa.tsv"
   threads:
     config["threads"]
   conda:
@@ -30,13 +31,14 @@ rule kraken_taxonomy:
   log:
     "logs/taxonomy/kraken2_{ref}.txt"
   shell:
-    """
-    kraken2 --db {input.ref} --threads {threads} \
+    """kraken2 --db {input.ref} --threads {threads} \
       --output {output.out} --report {output.summary} \
       --confidence {params.confidence} \
       --classified-out {output.classified} \
       --unclassified-out {output.unclassified} {input.fasta}
-    """
+      python workflow/scripts/KrakenTools/kreport2mpa.py \
+      -r {output.summary} -o {output.mpa}"""
+
 
 rule parse_kraken:
   input:
@@ -50,20 +52,4 @@ rule parse_kraken:
   shell:
     """Rscript workflow/scripts/taxonomy/parse_kraken.R \
       {output.taxa} {output.summary} {input.kraken} \
-      --log={log} --cores={threads}"""
-  
-  
-    
-# rule parse_kraken:
-#   input:
-#     kraken = rules.kraken_taxonomy.output.out
-#   output:
-#     taxa_qs = "data/taxonomy/kraken_{ref}_labels.qs",
-#     taxa_tsv = "data/taxonomy/kraken_{ref}_labels.tsv",
-#     summary = "data/taxonomy/kraken_{ref}_summary.tsv"
-#   threads:
-#     config["threads"]
-#   log:
-#     "logs/taxonomy/parse_kraken2_{ref}.txt"
-#   script:
-#     "../scripts/taxonomy/parse_kraken.R"
+      --log={log} --cores={threads}"""  

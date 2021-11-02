@@ -31,6 +31,16 @@ There are two steps to install the pipeline:
     R CMD BATCH --vanilla ./install_r_packages.R
     ```
 
+3. **Download KrakenTools scripts.**
+
+Either download or clone the [KrakenTools repository (release v1.2)](https://github.com/jenniferlu717/KrakenTools/releases/tag/v1.2) to a new directory `workflow/scripts/KrakenTools.`
+
+    ```sh
+    wget https://github.com/jenniferlu717/KrakenTools/archive/refs/tags/v1.2.tar.gz
+    tar -xzvf v1.2.tar.gz
+    mv KrakenTools-1.2 workflow/scripts/KrakenTools
+    ```
+
 ### Troubleshooting conda and environment variables
 
 If you have other versions of R and R user libraries elsewhere, you might encounter some problems with environment variables and conda. You may need to provide a local `.bashrc` file to place the conda path at the beginning of your `$PATH` environment variable.

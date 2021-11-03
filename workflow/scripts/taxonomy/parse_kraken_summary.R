@@ -33,7 +33,7 @@ if (!interactive()) {
 }
 
 if (interactive()) {
-  db = "minikraken"
+  db = "silva"
   arguments$outfile_standard <- "output_test"
   arguments$outfile_full <- "output_full_table"
   arguments$kraken_summary <- sprintf("output/taxa/kraken/%s/kraken_summary.out", db)
@@ -201,9 +201,11 @@ stopifnot(sum(summ_tb$taxid != taxtib$taxid)==0)
 
 # Select only subset of levels for the standardized
 # output table
+mpa_tib %<>%
+    dplyr::filter(colname %in% colnames(taxtib))
 nmap <- setNames(mpa_tib$new_colname, mpa_tib$colname)
 sub_tax <- taxtib %>%
-    dplyr::select(taxid, all_of(mpa_tib$colname), tax_string) 
+    dplyr::select(taxid, any_of(mpa_tib$colname), tax_string) 
 sub_tax %<>%
     dplyr::rename_at(names(nmap), ~ nmap[.])
 
@@ -211,12 +213,7 @@ summ_tb %>%
     dplyr::select(taxname, taxid) %>%
     dplyr::left_join(sub_tax) %>%
     write_tsv(arguments$outfile_standard)
-
-summ_tb %>%
-    dplyr::select(taxname, taxid) %>%
-    dplyr::left_join(sub_tax) %>%
-    readr::write_tsv(arguments$outfile_standard)
-
+    
 summ_tb %>%
     dplyr::select(taxname, taxid) %>%
     dplyr::left_join(taxtib) %>%

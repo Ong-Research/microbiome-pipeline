@@ -152,4 +152,3 @@ labels %>%
   
 taxa_summary %>%
   readr::write_tsv(arguments$taxa_summary)
-

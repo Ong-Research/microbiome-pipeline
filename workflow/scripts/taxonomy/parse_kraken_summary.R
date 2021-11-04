@@ -1,6 +1,6 @@
 #!/usr/local/bin/Rscript
 
-#' Parses kraken2 summary file (taxonomic hierarchy) into a readable table
+#' Parses kraken2 summary file (taxonomic hierarchy) into a table
 #' that maps sequence IDs to taxonomy levels.
 #' Produces two outputs: the full table (with all hierarchy levels
 #' present in the original summary file, which may include things like subspecies)
@@ -33,7 +33,7 @@ if (!interactive()) {
 }
 
 if (interactive()) {
-  db = "silva"
+  db = "minikraken"
   arguments$outfile_standard <- "output_test"
   arguments$outfile_full <- "output_full_table"
   arguments$kraken_summary <- sprintf("output/taxa/kraken/%s/kraken_summary.out", db)
@@ -71,7 +71,8 @@ summ_tb <- readr::read_tsv(arguments$kraken_summary,
 # Compute number of spaces - used to determine hierarchical relationships
 summ_tb %<>%
     dplyr::mutate(nspace = 
-        purrr::map(taxname, ~ str_count(.x, pattern=" "))) %>%
+        #purrr::map(taxname, ~ str_count(.x, pattern=" "))) %>%
+        purrr::map(taxname, ~ str_match(.x, "(^\\s*)")[,1] %>% nchar)) %>%
     unnest(nspace) %>%
     dplyr::mutate(taxid = as.character(taxid)) %>%
     dplyr::mutate(taxname = purrr::map(taxname, str_trim)) %>%
@@ -79,16 +80,22 @@ summ_tb %<>%
 
 #' Recursive function to process the summary file into a
 #' list of taxonomy strings, indexed by taxID.
-#' we'll  initialize with "tmp" - it's a little sloppy
+#' it's a bit sloppy
 search_tree <- function(summ_tb, curr=1, prev=0,
-    curr_string = list("tmp" = "tmp"), curr_nspace = c(-1), debug=F) {
+    curr_string = list(tmp="tmp"), curr_nspace = c(-1), debug=F) {
+
+    # check to make sure in synch
+    stopifnot(length(curr_string) == length(curr_nspace))
+    
     cl <- summ_tb[curr,] %>% as.list()
 
-    if (prev == 0) {
-        pl <- list(nspace = 0)
-    } else {
-        pl <- summ_tb[prev,] %>% as.list()
-    }
+    # previous space level is at the end of the list
+    prev_space <- curr_nspace[length(curr_nspace)]
+    #if (prev == 0) {
+    #    pl <- list(nspace = 0)
+    #} else {
+    #    pl <- summ_tb[prev,] %>% as.list()
+    #}
 
     strings = list()
 
@@ -99,10 +106,12 @@ search_tree <- function(summ_tb, curr=1, prev=0,
     }
 
     if (debug) {
-        message("prev nspace ", pl$nspace, " curr nspace ", cl$nspace)
+        message("curr ", curr, " prev ", prev)
+        message("prev nspace ", prev_space, " curr nspace ", cl$nspace)
+        message("\t\tlength check OK?",  length(curr_nspace) == length(curr_string))
     }
     res <- "whoa"
-    if (cl$nspace > pl$nspace) {
+    if (cl$nspace > prev_space) {
 
         # if we are still proceeding through the tree, keep going.
         curr_string[[cl$taxlevel]] = cl$taxname        
@@ -114,7 +123,7 @@ search_tree <- function(summ_tb, curr=1, prev=0,
                 paste(collapse="|"))
             message("\t", paste(curr_nspace, collapse = "|"))
         }
-    } else if (cl$nspace <= pl$nspace) { 
+    } else if (cl$nspace <= prev_space) { 
         # if the current level is at or above the prev, 
         # then: 
         # back up until we get to the 
@@ -125,14 +134,16 @@ search_tree <- function(summ_tb, curr=1, prev=0,
         # and current to current+1
         if (debug) {
             message("backing up. prev was: ", paste(curr_string, collapse = "|"))
-            message("\t\t", paste(curr_nspace, collapse = "|"))
+            message("\t\tnspace: ", paste(curr_nspace, collapse = "|"))
         }
+        #temp_nspace = curr_nspace
         curr_nspace %<>% .[. < cl$nspace ]
+        #curr_string %<>% .[temp_nspace < cl$nspace] 
         curr_string %<>% .[1:length(curr_nspace)]
 
         if (debug) {
             message("now prev is: ", paste(curr_string, collapse = "|"))
-            message("\t\t", paste(curr_nspace, collapse = "|"))
+            message("\t\tnspace: ", paste(curr_nspace, collapse = "|"))
         }
         curr_string[[cl$taxlevel]] = cl$taxname
         curr_nspace <- c(curr_nspace, cl$nspace)
@@ -182,16 +193,24 @@ mpa_string <- function(taxlist, mpa_tib) {
 
 # Obtain taxonomy strings from table
 strings <- summ_tb %>%
-    search_tree(debug = F)
+    search_tree(debug = T)
+
+# get order of taxlevels
+all_levels = c("U", "R", "D", "P", "C", "O", "F", "G", "S")
+all_levels = purrr::map(all_levels,
+    ~ c(.x, sprintf("%s%s", .x, 1:5))) %>% 
+    unlist
 
 # Make table with full taxonomy
 # with all levels from original file
+# put in order of taxonomy
 taxtib <- tax_tibble(strings) %>%
     dplyr::mutate(tax_string = 
         purrr::map(taxlist, 
             ~ mpa_string(unlist(.x), mpa_tib))) %>%
     unnest(tax_string) %>%
-    dplyr::select(-taxlist, -tmp)
+    dplyr::select(-taxlist) %>%
+    dplyr::select(taxid, tidyselect::any_of(all_levels), tax_string)
 
 # Check
 stopifnot(nrow(taxtib) == nrow(summ_tb))

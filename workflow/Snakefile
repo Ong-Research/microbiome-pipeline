@@ -23,6 +23,9 @@ all_files = list(value.replace(".fastq.gz","") for value in all_files)
 
 batches = np.unique(sample_table.batch).tolist()
 
+# reference databases
+refs = ["greengenes", "silva", "rdp", "minikraken"]
+
 def get_batch_samples(sample_table, batch):
   """
   gets the samples on a single batch based on the sample table
@@ -98,31 +101,11 @@ rule clean_phylotree:
   shell:
     "rm -fr output/phylotree"
     
-rule mia:
-  input:
-    asv = "output/dada2/after_qc/asv_mat_wo_chim.qs",
-    taxa = "output/taxa/kraken/minikraken/kraken_taxatable.qs",
-    tree = "output/phylotree/newick/tree.nwk",
-    meta = config["metadata"]
-  output:
-    mia = "output/mia/mia_object.qs"
-  params:
-    prefix = config['asv_prefix'],
-    config = "config/config.yaml"
-  log:
-    "logs/prepare_mia_object.log"
-  threads: config["threads"]
-  shell:
-    """Rscript workflow/scripts/mia/prepare_mia_object.R \
-      {output.mia} --asv={input.asv} --taxa={input.taxa} \
-      --tree={input.tree} --meta={input.meta} \
-      --asv_prefix={params.prefix} --log={log} \
-      --config={params.config} --cores={threads}"""
 
 # generate mia objects for all databases
-rule mia_all:
+rule mia:
   input:
-    expand("output/mia_{ref}/mia_object.qs",
+    expand("output/mia/{ref}/mia_object.qs",
       ref = ["greengenes", "silva", "rdp", "minikraken"])
 
 rule mia_database:
@@ -132,7 +115,7 @@ rule mia_database:
     tree = "output/phylotree/newick/tree.nwk",
     meta = config["metadata"]
   output:
-    mia = "output/mia_{ref}/mia_object.qs"
+    mia = "output/mia/{ref}/mia_object.qs"
   params:
     prefix = config['asv_prefix'],
     config = "config/config.yaml"

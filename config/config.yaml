@@ -76,7 +76,7 @@ qc_parameters:
   min_asvs_per_sample: 3
 
 # downloaded from https://benlangmead.github.io/aws-indexes/k2
-# the first three contain only bacteria, the last one contains viral, human, archea too
+# the first three contain only bacteria, minikraken contains viral, human, archea too
 kraken_dbs:
   {
     greengenes: "data/kraken_dbs/16S_Greengenes_k2db",
@@ -84,6 +84,7 @@ kraken_dbs:
     rdp: "data/kraken_dbs/16S_RDP_k2db",
     minikraken: "data/kraken_dbs/minikraken2_v2_8GB_201904_UPDATE"
   }
+
 
 # According to this issue:
 # https://github.com/DerrickWood/kraken2/issues/167  

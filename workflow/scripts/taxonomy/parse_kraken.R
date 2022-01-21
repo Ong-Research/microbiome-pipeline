@@ -1,18 +1,23 @@
 #!/usr/local/bin/Rscript
 
-#' Parses kraken2 results into a readable table
+#' Parses kraken2 results into a readable table.
+#' By default, maps tax IDs to taxonomy strings using the NCBI database.
+#' If --map file provided (output of parse_kraken_summary), uses that as a mapping instead.
+#' Output files are taxa_table and taxa_summary
 #' @param kraken results computed by kraken2
 #' @author rwelch
+#' @author chasman
 
 "Parse kraken2 results
 
 Usage:
-parase_kraken.R [<taxa_table> <taxa_summary>] [<kraken_file>] [--log=<logfile> --cores=<cores>]
-parase_kraken.R (-h|--help)
-parase_kraken.R --version
+parse_kraken.R [<taxa_table> <taxa_summary>] [<kraken_file>] [--map=<map_file> --log=<logfile> --cores=<cores>]
+parse_kraken.R (-h|--help)
+parse_kraken.R --version
 
 Options:
 --log=<logfile>    name of the log file [default: ./parse_kraken.log]
+--map=<map_file>   name of file with map from taxid to taxonomy [default: NULL]
 --cores=<cores>    number of parallel CPUs [default: 8]" -> doc
 
 library(docopt)
@@ -30,9 +35,11 @@ if (!interactive()) {
 
 if (interactive()) {
 
-  arguments$taxa_table <- "output"
-  arguments$kraken_file <- "output/taxa/kraken/minikraken/kraken_results.out"
-
+  db = "silva"
+  arguments$taxa_table <- "parse_output"
+  arguments$taxa_summary <- "parse_output_summary"
+  arguments$kraken_file <- sprintf("output/taxa/kraken/%s/kraken_results.out", db)
+  arguments$map <- "output_test"
 }
 
 
@@ -47,64 +54,88 @@ library(BiocParallel)
 
 bpp <- BiocParallel::MulticoreParam(workers = as.numeric(arguments$cores))
 
-message("getting ncbi database")
-ncbi_db <- taxizedb::db_download_ncbi()
-taxa <- c("phylum", "class", "order", "family", "genus", "species")
+tax_order <- c("domain","superkingdom", "kingdom", "phylum", 
+    "class", "order", "family", "genus", "species")
 
-message("reading labels from kraken")
-kraken <- readr::read_tsv(arguments$kraken_file, col_names = FALSE)
+# mapping file provided
+if (!is.null(arguments$map)) {
 
-get_taxa_from_id <- function(results) {
-  query <- taxizedb::classification(results$id, db = "ncbi")
+  message("reading labels from mapping file ", arguments$map)
 
-  results %>%
-    dplyr::mutate(
-      id_taxa = map(query, list),
-      id_taxa = purrr::map(id_taxa, ~ unique(.[[1]])),
-      is_na = ! purrr::map_lgl(id_taxa, is.data.frame))
+  # taxonomy info
+  map_tb <- readr::read_tsv(arguments$map)
+  # ASV assignments
+  kraken <- readr::read_tsv(arguments$kraken_file, 
+    col_names = c("status", "asv", "taxid", "seq_len", "lca_mapping"))
+  labels <- kraken %>%
+    dplyr::select(asv, taxid) %>%
+    dplyr::left_join(map_tb) %>%
+    dplyr::select(-taxname, -taxid)
 
-}
+} else {
+  message("getting ncbi database")
+  ncbi_db <- taxizedb::db_download_ncbi()
 
-clean_id_taxa <- function(id_taxa, taxa) {
+  message("reading labels from kraken")
+  kraken <- readr::read_tsv(arguments$kraken_file, 
+    col_names = c("status", "asv", "id", "seq_length", "id_bp"))
 
-  name <- NULL
+  get_taxa_from_id <- function(results) {
+    query <- taxizedb::classification(results$id, db = "ncbi")
 
-  if (is.data.frame(id_taxa)) {
-    id_taxa %<>%
-      dplyr::filter(rank %in% taxa) %>%
-      dplyr::select(-id)
-    id_taxa %<>%
-      tidyr::pivot_wider(names_from = rank, values_from = name)
+    results %>%
+      dplyr::mutate(
+        id_taxa = map(query, list),
+        id_taxa = purrr::map(id_taxa, ~ unique(.[[1]])),
+        is_na = ! purrr::map_lgl(id_taxa, is.data.frame))
+
   }
-  id_taxa
+
+  clean_id_taxa <- function(id_taxa, taxa) {
+
+    name <- NULL
+
+    if (is.data.frame(id_taxa)) {
+      id_taxa %<>%
+        dplyr::filter(rank %in% taxa) %>%
+        dplyr::select(-id)
+      id_taxa %<>%
+        tidyr::pivot_wider(names_from = rank, values_from = name)
+    }
+    id_taxa
+  }
+
+  clean_id_taxa_wrap <- function(labels, taxa, bpp) {
+
+    labels %<>%
+      dplyr::mutate(
+        id_taxa_clean = BiocParallel::bplapply(id_taxa, clean_id_taxa, taxa,
+          BPPARAM = bpp))
+
+    # any_of will allow for missing taxonomic levels (eg domain)
+    labels %>%
+      dplyr::select(asv, id_taxa_clean) %>%
+      tidyr::unnest(cols = c(id_taxa_clean)) %>%
+      dplyr::select(asv, tidyselect::any_of(taxa)) 
+
+  }
+
+  message("parsing labels")
+  labels <- get_taxa_from_id(kraken) 
+  labels <- clean_id_taxa_wrap(labels, tax_order, bpp)  
+  # after the cleaning, we have a table like this:
+  #    asv    phylum         class           order             family  genus species
+  #   <chr>  <chr>          <chr>           <chr>             <chr>   <chr> <chr>  
+  #  1 asv_1  Chordata       Mammalia        Artiodactyla      Cervid… Cerv… Cervus…
+  #  2 asv_2  Chordata       Mammalia        Artiodactyla      Cervid… Cerv… Cervus…
+  #  3 asv_3  Actinobacteria Actinomycetia   Pseudonocardiales Pseudo… Sacc… Saccha…
 }
-
-clean_id_taxa_wrap <- function(labels, taxa, bpp) {
-
-  labels %<>%
-    dplyr::mutate(
-      id_taxa_clean = BiocParallel::bplapply(id_taxa, clean_id_taxa, taxa,
-        BPPARAM = bpp))
-
-  labels %>%
-    dplyr::select(asv, id_taxa_clean) %>%
-    tidyr::unnest(cols = c(id_taxa_clean)) %>%
-    dplyr::select(asv, tidyselect::one_of(taxa))
-
-}
-
-message("parsing labels")
-kraken %<>%
-  rlang::set_names(c("rank", "asv", "id", "seq_length", "id_bp"))
-  
-labels <- get_taxa_from_id(kraken)
-labels <- clean_id_taxa_wrap(labels, taxa, bpp)
 
 taxa_summary <- labels %>%
-  tidyr::pivot_longer(-asv, names_to = "taxa", values_to = "value") %>%
+  tidyr::pivot_longer(tidyselect::any_of(tax_order), 
+    names_to = "taxa", values_to = "value") %>%
   dplyr::mutate(
-    taxa = factor(taxa, levels = c("phylum", "class", "order", "family",
-      "genus", "species"))) %>%
+    taxa = factor(taxa, levels = tax_order)) %>%
   dplyr::group_by(taxa) %>%
   dplyr::summarize(
     total = length(value),

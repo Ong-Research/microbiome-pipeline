@@ -28,6 +28,7 @@
 #    echo wget $remote -O $local
 #done
 
-#snakemake -j8 taxonomy --use-cond # to labels the ASV sequences with [kraken2](https://ccb.jhu.edu/software/kraken2/). Databases need to be downloaded in advance from <https://benlangmead.github.io/aws-indexes/k2>
+#snakemake -j8 taxonomy --use-cond # to labels the ASV sequences with [kraken2](https://ccb.jhu.edu/software/kraken2/). 
+# Databases need to be downloaded in advance from <https://benlangmead.github.io/aws-indexes/k2>
 #snakemake -j8 phylotree --use-conda # computes the phylogenetic tree using `qiime2`'s FastTree
 #snakemake -j8 mia # prepare the `TreeSummarizedExperiment` containing all the data generated

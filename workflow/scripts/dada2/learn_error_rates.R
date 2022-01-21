@@ -68,10 +68,10 @@ print(arguments)
 # to appease snakemake after all reads were
 # filtered out from the input file.
 # stop if we have no files left after checking for empty.
-sizes <- lapply(arguments$filtered, FUN = function(x) file.info(x)$size) 
+sizes <- lapply(arguments$filtered, FUN = function(x) file.info(x)$size)
 sizes <- setNames(sizes, arguments$filtered)
 nonempty <- names(sizes[sizes > 0])
-stopifnot(length(nonempty)>0)
+stopifnot(length(nonempty) > 0)
 
 message("loading packages")
 library(dada2)
@@ -96,7 +96,7 @@ if (!is.null(arguments$batch)) {
 
 print("computing error rates")
 errs <- dada2::learnErrors(
-  nonempty, #arguments$filtered, 
+  nonempty, #arguments$filtered,
   nbases = as.numeric(config$learn_nbases),
   multithread = as.numeric(arguments$cores), randomize = TRUE)
   

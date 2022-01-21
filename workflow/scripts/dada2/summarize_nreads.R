@@ -1,4 +1,9 @@
-"Summarized the # or reads per processing step
+#!/usr/local/bin/Rscript
+
+#' Summarize number of reads per processing step
+#' @author rwelch2
+#'
+"Summarized the # of reads per processing step
 
 Usage:
 summarize_nreads.R [<nreads_file> <nreads_fig> <preads_fig>] [<filt_summary_file> <derep_summary_file> <final_asv_mat>] [--log=<logfile>]
@@ -7,7 +12,7 @@ summarize_nreads.R --version
 
 Options:
 -h --help    show this screen
---log=<logfile>    name of the log file [default: filter_and_trim.log]" -> doc
+--log=<logfile>    name of the log file [default: summarize_nreads.log]" -> doc
 
 library(docopt)
 
@@ -50,7 +55,6 @@ message(stringr::str_c(names(info), " : ", info, "\n"))
 message("loading packages")
 library(magrittr)
 library(tidyverse)
-library(vroom)
 library(qs)
 
 stats <- list()
@@ -61,7 +65,11 @@ stats[[3]] <- qs::qread(arguments$final_asv_mat) %>%
   rowSums() %>%
   tibble::tibble(samples = names(.), nreads = .)
 
-stats <- purrr::reduce(stats, purrr::partial(dplyr::inner_join, by = "samples"))
+# change to full join so we see input files that were lost during any step
+stats <- purrr::reduce(stats, purrr::partial(dplyr::full_join, by = "samples"))
+# fill in 0s for final nreads for samples that were previously lost
+stats %<>%
+  dplyr::mutate(nreads = replace_na(nreads, 0))
 
 stats %>%
   readr::write_tsv(arguments$nreads_file)
@@ -76,6 +84,11 @@ rel_stats <- stats %>%
   dplyr::mutate(
     dplyr::across(
       -samples, list(~ . / raw), .names = "{.col}"))
+
+# remove empties from relative change plot
+# they don't get plotted anyway
+rel_stats %<>%
+  dplyr::filter(!is.nan(nreads))
 
 make_plot <- function(stats, summary_fun = median, ...) {
 

@@ -103,7 +103,7 @@ rule mia:
     asv = "output/dada2/after_qc/asv_mat_wo_chim.qs",
     taxa = "output/taxa/kraken/minikraken/kraken_taxatable.qs",
     tree = "output/phylotree/newick/tree.nwk",
-    meta = "data/meta.tsv"
+    meta = config["metadata"]
   output:
     mia = "output/mia/mia_object.qs"
   params:
@@ -119,7 +119,7 @@ rule mia:
       --asv_prefix={params.prefix} --log={log} \
       --config={params.config} --cores={threads}"""
 
-include: "rules/extra_dust.smk"
+#include: "rules/extra_dust.smk"
 include: "rules/quality_control.smk"
 include: "rules/dada2.smk"
 include: "rules/taxonomy.smk"

@@ -78,7 +78,7 @@ summ_tb %<>%
     dplyr::mutate(taxname = purrr::map(taxname, str_trim)) %>%
     unnest(taxname)
 
-#' Recursive function to process the summary file into a
+#' function to process the summary file into a
 #' list of taxonomy strings, indexed by taxID.
 #' it's a bit sloppy
 search_tree <- function(summ_tb, curr=1, prev=0,
@@ -91,12 +91,8 @@ search_tree <- function(summ_tb, curr=1, prev=0,
 
     # previous space level is at the end of the list
     prev_space <- curr_nspace[length(curr_nspace)]
-    #if (prev == 0) {
-    #    pl <- list(nspace = 0)
-    #} else {
-    #    pl <- summ_tb[prev,] %>% as.list()
-    #}
 
+    # the downstream strings that we will collect
     strings = list()
 
     # stop if we ran off the end

@@ -24,23 +24,38 @@ rule kraken_taxonomy:
   threads:
     config["threads"]
   conda:
-    "../envs/kraken.yaml" # relative to workflow/rules/
+    "../envs/kraken.yaml"
   params:
     confidence = config["kraken_confidence"]
   log:
     "logs/taxonomy/kraken2_{ref}.txt"
   shell:
-    """
-    kraken2 --db {input.ref} --threads {threads} \
+    """kraken2 --db {input.ref} --threads {threads} \
       --output {output.out} --report {output.summary} \
       --confidence {params.confidence} \
       --classified-out {output.classified} \
-      --unclassified-out {output.unclassified} {input.fasta}
-    """
+      --unclassified-out {output.unclassified} {input.fasta}"""
+
+# generates the taxa ID -> name mapping file
+# as some databases do not use NCBI
+rule parse_kraken_summary:
+  input:
+    kraken = "output/taxa/kraken/{ref}/kraken_summary.out"
+  output:
+    standard = "output/taxa/kraken/{ref}/kraken_taxmap_standard.tsv",
+    full = "output/taxa/kraken/{ref}/kraken_taxmap_full.tsv"
+  threads: 1
+  log:
+    "logs/taxonomy/parse_kraken2_summary_{ref}.txt"
+  shell:
+    """Rscript workflow/scripts/taxonomy/parse_kraken_summary.R \
+      {output.standard} {output.full} {input.kraken} \
+     --log={log}"""
 
 rule parse_kraken:
   input:
-    kraken = "output/taxa/kraken/{ref}/kraken_results.out"
+    kraken = "output/taxa/kraken/{ref}/kraken_results.out",
+    mapfile = "output/taxa/kraken/{ref}/kraken_taxmap_standard.tsv"
   output:
     taxa = "output/taxa/kraken/{ref}/kraken_taxatable.qs",
     summary = "output/taxa/kraken/{ref}/kraken_taxasummary.tsv"
@@ -50,20 +65,6 @@ rule parse_kraken:
   shell:
     """Rscript workflow/scripts/taxonomy/parse_kraken.R \
       {output.taxa} {output.summary} {input.kraken} \
+      --map {input.mapfile} \
       --log={log} --cores={threads}"""
-  
-  
-    
-# rule parse_kraken:
-#   input:
-#     kraken = rules.kraken_taxonomy.output.out
-#   output:
-#     taxa_qs = "data/taxonomy/kraken_{ref}_labels.qs",
-#     taxa_tsv = "data/taxonomy/kraken_{ref}_labels.tsv",
-#     summary = "data/taxonomy/kraken_{ref}_summary.tsv"
-#   threads:
-#     config["threads"]
-#   log:
-#     "logs/taxonomy/parse_kraken2_{ref}.txt"
-#   script:
-#     "../scripts/taxonomy/parse_kraken.R"
+

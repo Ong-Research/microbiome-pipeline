@@ -119,6 +119,33 @@ rule mia:
       --asv_prefix={params.prefix} --log={log} \
       --config={params.config} --cores={threads}"""
 
+# alternative to rule mia: generate mia objects for all databases
+rule mia_all:
+  input:
+    expand("output/mia_{ref}/mia_object.qs",
+      ref = ["greengenes", "silva", "rdp", "minikraken"])
+
+rule mia_database:
+  input:
+    asv = "output/dada2/after_qc/asv_mat_wo_chim.qs",
+    taxa = "output/taxa/kraken/{ref}/kraken_taxatable.qs",
+    tree = "output/phylotree/newick/tree.nwk",
+    meta = config["metadata"]
+  output:
+    mia = "output/mia_{ref}/mia_object.qs"
+  params:
+    prefix = config['asv_prefix'],
+    config = "config/config.yaml"
+  log:
+    "logs/prepare_mia_object_{ref}.log"
+  threads: config["threads"]
+  shell:
+    """Rscript workflow/scripts/mia/prepare_mia_object.R \
+      {output.mia} --asv={input.asv} --taxa={input.taxa} \
+      --tree={input.tree} --meta={input.meta} \
+      --asv_prefix={params.prefix} --log={log} \
+      --config={params.config} --cores={threads}"""
+
 #include: "rules/extra_dust.smk"
 include: "rules/quality_control.smk"
 include: "rules/dada2.smk"

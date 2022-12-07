@@ -31,40 +31,79 @@ rule kraken_taxonomy:
     "logs/taxonomy/kraken2_{ref}.txt"
   shell:
     """kraken2 --db {input.ref} --threads {threads} \
-      --output {output.out} --report {output.summary} \
+      --output {output.out} --use-names \
+      --report {output.summary} --use-mpa-style \
       --confidence {params.confidence} \
       --classified-out {output.classified} \
       --unclassified-out {output.unclassified} {input.fasta}"""
 
-# generates the taxa ID -> name mapping file
-# as some databases do not use NCBI
-rule parse_kraken_summary:
+rule blast_fast_single:
   input:
-    kraken = "output/taxa/kraken/{ref}/kraken_summary.out"
+    fasta = "output/taxa/fasta/asv_sequences.fa"
   output:
-    standard = "output/taxa/kraken/{ref}/kraken_taxmap_standard.tsv",
-    full = "output/taxa/kraken/{ref}/kraken_taxmap_full.tsv"
-  threads: 1
-  log:
-    "logs/taxonomy/parse_kraken2_summary_{ref}.txt"
+    blast = "output/taxa/blast/{db}/blast_results.tsv"
+  params:
+    db = "data/blast_dbs/{db}",
+    fmt = config["blast"]["format"],
+    perc = config["blast"]["perc"]
+  threads: 24
   shell:
-    """Rscript workflow/scripts/taxonomy/parse_kraken_summary.R \
-      {output.standard} {output.full} {input.kraken} \
-     --log={log}"""
+    """blastn -db {params.db} -query {input.fasta} \
+      -out {output.blast} -outfmt {params.fmt} \
+      -perc_identity {params.perc} \
+      -mt_mode 1 -num_threads {threads}"""
 
-rule parse_kraken:
+
+rule clean_kraken_with_blast:
   input:
     kraken = "output/taxa/kraken/{ref}/kraken_results.out",
-    mapfile = "output/taxa/kraken/{ref}/kraken_taxmap_standard.tsv"
+    kraken_summary = "output/taxa/kraken/{ref}/kraken_summary.out",
+    blast = "output/taxa/blast/{db}/blast_results.tsv",
+    fasta = "output/taxa/fasta/asv_sequences.fa"
   output:
-    taxa = "output/taxa/kraken/{ref}/kraken_taxatable.qs",
-    summary = "output/taxa/kraken/{ref}/kraken_taxasummary.tsv"
-  threads: config["threads"] / 2
+    taxa = "output/taxa/kraken_match/{ref}/{db}/kraken_rdata.qs",
+    hits = "output/taxa/kraken_match/{ref}/{db}/kraken_hits.qs"
+  threads: 1
   log:
-    "logs/taxonomy/parse_kraken2_{ref}.txt"
+    "logs/taxonomy/{ref}/{db}/clean_kraken2_w_blast.txt"
   shell:
-    """Rscript workflow/scripts/taxonomy/parse_kraken.R \
-      {output.taxa} {output.summary} {input.kraken} \
-      --map {input.mapfile} \
-      --log={log} --cores={threads}"""
+    """Rscript workflow/scripts/taxonomy/clean_kraken_wblast.R \
+      {output.taxa} {output.hits} \
+      --kraken={input.kraken} --summary={input.kraken_summary} \
+      --blast={input.blast} --fasta={input.fasta} \
+      --log={log} --cores={threads}
+    """
+
+
+# generates the taxa ID -> name mapping file
+# as some databases do not use NCBI
+# rule parse_kraken_summary:
+#   input:
+#     kraken = "output/taxa/kraken/{ref}/kraken_summary.out"
+#   output:
+#     standard = "output/taxa/kraken/{ref}/kraken_taxmap_standard.tsv",
+#     full = "output/taxa/kraken/{ref}/kraken_taxmap_full.tsv"
+#   threads: 1
+#   log:
+#     "logs/taxonomy/parse_kraken2_summary_{ref}.txt"
+#   shell:
+#     """Rscript workflow/scripts/taxonomy/parse_kraken_summary.R \
+#       {output.standard} {output.full} {input.kraken} \
+#      --log={log}"""
+
+# rule parse_kraken:
+#   input:
+#     kraken = "output/taxa/kraken/{ref}/kraken_results.out",
+#     mapfile = "output/taxa/kraken/{ref}/kraken_taxmap_standard.tsv"
+#   output:
+#     taxa = "output/taxa/kraken/{ref}/kraken_taxatable.qs",
+#     summary = "output/taxa/kraken/{ref}/kraken_taxasummary.tsv"
+#   threads: config["threads"] / 2
+#   log:
+#     "logs/taxonomy/parse_kraken2_{ref}.txt"
+#   shell:
+#     """Rscript workflow/scripts/taxonomy/parse_kraken.R \
+#       {output.taxa} {output.summary} {input.kraken} \
+#       --map {input.mapfile} \
+#       --log={log} --cores={threads}"""
 

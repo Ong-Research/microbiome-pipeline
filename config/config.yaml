@@ -7,7 +7,6 @@
 # general parameters for run
 asv_prefix: "HSD2M"
 sample_table: "samples.tsv"
-negcontroltable: "negcontrols.tsv"
 metadata: "meta.tsv"
 threads: 32
 
@@ -34,7 +33,7 @@ filter_and_trim:
     minQ: 0
     maxEE: [2, 2]
   dust_jun2021:
-    truncQ: 22
+    truncQ: 12
     truncLen: [280, 250]
     trimLeft: 0
     trimRight: 0
@@ -63,7 +62,7 @@ merge_pairs:
     maxMismatch: 0
   dust_jun2021:
     minOverlap: 50
-    maxMismatch: 0    
+    maxMismatch: 0
 
 # dada2 remove chimeras
 remove_chimeras:
@@ -89,9 +88,13 @@ qc_parameters:
 kraken_dbs:
   {
     greengenes: "data/kraken_dbs/16S_Greengenes_k2db",
-    silva: "data/kraken_dbs/16S_SILVA138_k2db",
+    silva132: "data/kraken_dbs/16S_SILVA132_k2db",
+    silva138: "data/kraken_dbs/16S_SILVA138_k2db",
     rdp: "data/kraken_dbs/16S_RDP_k2db",
-    minikraken: "data/kraken_dbs/minikraken2_v2_8GB_201904_UPDATE"
+    k2_std: "data/kraken_dbs/k2_standard",
+    k2_std_08gb: "data/kraken_dbs/k2_standard_08gb",
+    k2_std_16gb: "data/kraken_dbs/k2_standard_16gb",
+    minikraken_v1: "data/kraken_dbs/minikraken2_v1_8GB"
   }
 
 # According to this issue:
@@ -102,6 +105,14 @@ kraken_dbs:
 # more details: https://github.com/DerrickWood/kraken2/wiki/Manual#output-formats
 kraken_confidence: 0.01
 
+blast:
+  perc: 0.3
+  dbs: ["16S_ribosomal_RNA"] #, "ref_prok_rep_genomes"]
+  format: "'6 qseqid sseqid evalue bitscore score mismatch positive stitle qframe sframe length pident'"
+  # format: "'6 qseqid sseqid evalue bitscore score mismatch positive stitle pident length'"
+
+
+
 # beta_div
 # any of c("bray", "fjaccard", "euclidean",
   # "hellinger", "mahalanobis", "manhattan", "bhjattacharyya", "canberra",
@@ -109,4 +120,4 @@ kraken_confidence: 0.01
 beta:
   comps: 20
   beta_div: ["bray", "fjaccard", "unifrac", "w_unifrac"]
-  beta_group: ["all", "genus", "family", "order"]
+  beta_group: ["all"]

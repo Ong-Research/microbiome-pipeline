@@ -8,7 +8,7 @@ configfile: "config/config.yaml"
 # sample_table = pd.read_table("all_samples2.tsv", index_col = 0)
 sample_table = pd.read_table(config['sample_table'], index_col = 1)
 
-sample_table = pd.read_table("samples.tsv", index_col = 1)
+# sample_table = pd.read_table("samples.tsv", index_col = 1)
 sample_table = sample_table.assign(
   merges = lambda df: "output/dada2/merge/" + df["batch"] + "/" +
     df.index + "_asv.qs")
@@ -47,6 +47,12 @@ rule clean_qc:
   shell:
     "rm -fr output/quality_control workflow/report/quality_profiles"
 
+rule prepare_dada2:
+  input:
+    "output/predada2/meta.qs",
+    "output/predada2/negcontrols.qs"
+
+
 rule dada2:
   input:
     expand("output/dada2/filtered/{sample}_filtered_R1.fastq.gz",
@@ -62,6 +68,10 @@ rule dada2:
     sample_table["merges"].tolist(),
     expand("output/dada2/asv_batch/{batch}_asv.qs", batch = batches),
     expand("output/dada2/asv_batch/{batch}_summary.tsv", batch = batches),
+    "output/dada2/remove_chim/asv_mat_wo_chim.qs"
+
+rule dada2_qc:
+  input:
     "output/dada2/after_qc/asv_mat_wo_chim.qs",
     "workflow/report/dada2qc/asv_matrix_wo_chim.png",
     "workflow/report/dada2qc/nasvs_by_seqlength.png",
@@ -73,13 +83,23 @@ rule clean_dada2:
   shell:
     "rm -fr output/dada2 workflow/report/dada2qc workflow/report/model"
 
+kraken_dbs = list(config['kraken_dbs'].keys())
+blast_dbs = config['blast']['dbs']
+
 rule taxonomy:
   input:
     "output/taxa/fasta/asv_sequences.fa",
     expand("output/taxa/kraken/{ref}/kraken_results.out",
-      ref = ["greengenes", "silva", "rdp", "minikraken"]),
-    expand("output/taxa/kraken/{ref}/kraken_taxatable.qs",
-      ref = ["greengenes", "silva", "rdp", "minikraken"])
+      ref = kraken_dbs),
+    expand("output/taxa/blast/{db}/blast_results.tsv",
+      db = blast_dbs),
+    expand("output/taxa/kraken_match/{ref}/{db}/kraken_rdata.qs",
+      ref = kraken_dbs, db = blast_dbs),
+    expand("output/taxa/kraken_match/{ref}/{db}/kraken_hits.qs",
+      ref = kraken_dbs, db = blast_dbs)
+
+    # expand("output/taxa/kraken/{ref}/kraken_taxatable.qs",
+    #   ref = kraken_dbs)
 
 rule clean_taxonomy:
   shell:
@@ -147,6 +167,7 @@ rule mia_database:
 
 #include: "rules/extra_dust.smk"
 include: "rules/quality_control.smk"
+include: "rules/prepare_dada2.smk"
 include: "rules/dada2.smk"
 include: "rules/taxonomy.smk"
 include: "rules/phylo_tree.smk"

@@ -65,7 +65,7 @@ rule clean_kraken_with_blast:
     hits = "output/taxa/kraken_match/{ref}/{db}/kraken_hits.qs"
   threads: 1
   log:
-    "logs/taxonomy/{ref}/{db}/clean_kraken2_w_blast.txt"
+    "logs/taxonomy/{ref}/{db}/clean_kraken2_w_blast.log"
   shell:
     """Rscript workflow/scripts/taxonomy/clean_kraken_wblast.R \
       {output.taxa} {output.hits} \
@@ -73,6 +73,22 @@ rule clean_kraken_with_blast:
       --blast={input.blast} --fasta={input.fasta} \
       --log={log} --cores={threads}
     """
+
+rule merge_kraken:
+  input:
+    taxa = expand("output/taxa/kraken_match/{ref}/{db}/kraken_rdata.qs",
+      ref = kraken_dbs, db = blast_dbs),
+    hits = expand("output/taxa/kraken_match/{ref}/{db}/kraken_hits.qs",
+      ref = kraken_dbs, db = blast_dbs),
+    blast = expand("output/taxa/blast/{db}/blast_results.tsv", db = blast_dbs)
+  output:
+    taxa = "output/taxa/kraken_merged/kraken_rdata.qs",
+    hits = "output/taxa/kraken_merged/kraken_hits.qs"
+  params:
+    config = "config/config.yaml"
+  threads: 1
+  script:
+    """../scripts/taxonomy/merge_dblabels_wblast.R"""
 
 
 # generates the taxa ID -> name mapping file

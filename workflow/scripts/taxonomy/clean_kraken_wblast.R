@@ -67,7 +67,7 @@ ksummary <- vroom::vroom(arguments$summary, col_names = c("taxa", "taxid")) %>%
 blast <- vroom::vroom(arguments$blast,
   col_names = c("qseqid", "sseqid", "evalue", "bitscore",
     "score", "mismatch", "positive", "stitle", "qframe",
-    "sframe", "length"))
+    "sframe", "length", "pident"))
 
 # first remove sequences with width outside fasta sequences
 fa <- ShortRead::readFasta(arguments$fasta)

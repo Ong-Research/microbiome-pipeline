@@ -104,6 +104,8 @@ kraken_dbs:
 # something higher, e.g. 0.5 
 # more details: https://github.com/DerrickWood/kraken2/wiki/Manual#output-formats
 kraken_confidence: 0.01
+kraken_db_merge: ["k2_std", "greengenes", "silva132"]
+kraken_blast_min_perc: 0.9
 
 blast:
   perc: 0.3

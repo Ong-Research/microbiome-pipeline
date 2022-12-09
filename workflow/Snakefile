@@ -96,10 +96,9 @@ rule taxonomy:
     expand("output/taxa/kraken_match/{ref}/{db}/kraken_rdata.qs",
       ref = kraken_dbs, db = blast_dbs),
     expand("output/taxa/kraken_match/{ref}/{db}/kraken_hits.qs",
-      ref = kraken_dbs, db = blast_dbs)
-
-    # expand("output/taxa/kraken/{ref}/kraken_taxatable.qs",
-    #   ref = kraken_dbs)
+      ref = kraken_dbs, db = blast_dbs),
+    "output/taxa/kraken_merged/kraken_rdata.qs",
+    "output/taxa/kraken_merged/kraken_hits.qs"
 
 rule clean_taxonomy:
   shell:

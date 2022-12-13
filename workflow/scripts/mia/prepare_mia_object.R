@@ -36,9 +36,9 @@ if (!interactive()) {
 if (interactive()) {
 
   arguments$asv <- "output/dada2/after_qc/asv_mat_wo_chim.qs"
-  arguments$taxa <- "output/taxa/kraken/minikraken/kraken_taxatable.qs"
+  arguments$taxa <- "output/taxa/kraken_merged/kraken_rdata.qs"
   arguments$tree <- "output/phylotree/newick/tree.nwk"
-  arguments$meta <- "data/meta.tsv"
+  arguments$meta <- "output/predada2/meta.tsv"
   arguments$asv_prefix <- "HSD2M"
 
 }
@@ -74,130 +74,150 @@ taxa <- qs::qread(arguments$taxa)
 tree <- ape::read.tree(arguments$tree)
 meta <- readr::read_tsv(arguments$meta)
 
+cdata <- meta %>%
+  as.data.frame() %>%
+  tibble::column_to_rownames("key")
+
+# clean samples
+sample_names <- intersect(
+  cdata %>%
+    rownames(),
+  rownames(asv))
+
+# clean ASVs
 asv_sequences <- colnames(asv)
 colnames(asv) <- str_c(arguments$asv_prefix, seq_along(asv_sequences),
   sep = "_")
 names(asv_sequences) <- colnames(asv)
 asv_sequences <- Biostrings::DNAStringSet(asv_sequences)
 
-asv_aux <- tibble::tibble(asv = colnames(asv))
+taxa %<>%
+  dplyr::add_count(asv) %>%
+  dplyr::filter(n == 1) %>%
+  dplyr::select(-n) %>%
+  dplyr::select(-kraken_db, -criteria)
 
+asv_names <- intersect(names(asv_sequences), taxa$asv)
 
-# need to fix parse_taxa to return a tibble of length 
-# equal to all the sequences and not only the sequences with known information
+asv <- asv[, asv_names]
+asv_sequences <- asv_sequences[asv_names, ]
 
-cdata <- meta %>%
-  as.data.frame() %>%
-  tibble::column_to_rownames("key")
+tree$tip.label %<>%
+  stringr::str_remove_all("\\'") # either qiime2 or ape is adding "'" at the 
+  # start and end of ASV names
+
+tree <- ape::keep.tip(tree, asv_names)
+
+rdata <- taxa %>%
+    as.data.frame() %>%
+    tibble::column_to_rownames("asv")
 
 out <- TreeSummarizedExperiment::TreeSummarizedExperiment(
-  assays = list(counts = t(asv)),
-  colData = cdata[rownames(asv), ], # need to make sure correct order
-  rowData = asv_aux %>%
-    dplyr::left_join(taxa, by = "asv") %>%
-    as.data.frame() %>%
-    tibble::column_to_rownames("asv"),
+  assays = list(counts = t(asv[sample_names,])),
+  colData = cdata[sample_names, ],
+  rowData = rdata,
   rowTree = tree)
-
-bpp <- BiocParallel::MulticoreParam(workers = as.numeric(arguments$cores))
-
-message("estimate diversity")
-out <- mia::estimateDiversity(out, abund_values = "counts", BPPARAM = bpp)
-
-message("estimate richness")
-out <- mia::estimateRichness(out, abund_values = "counts", BPPARAM = bpp)
-
-if (!is.null(arguments$config)) {
-
-  config <- yaml::read_yaml(arguments$config)[["beta"]]
-
-}
-
-compute_mds_wrap <- function(mia, dist_name, altexp_name, ncomps) {
-
-  message("computing beta diversity for ", dist_name)
-
-  if (dist_name %in% c("bray", "euclidean", "hellinger", "mahalanobis",
-    "manhattan", "bhjattacharyya", "canberra", "chord")) {
-
-    mia <- scater::runMDS(
-      mia, FUN = parallelDist::parDist,
-      method = dist_name, threads = as.numeric(arguments$cores),
-      name = altexp_name, ncomponents = ncomps, exprs_values = "counts",
-      keep_dist = FALSE)
-
-  } else if (dist_name == "fjaccard") {
-
-    mia <- scater::runMDS(
-      mia, FUN = parallelDist::parDist,
-      method = "fJaccard", threads = as.numeric(arguments$cores),
-      name = altexp_name, ncomponents = ncomps, exprs_values = "counts",
-      keep_dist = FALSE)
-
-  } else if (dist_name == "unifrac") {
-
-    unifrac <- mia::calculateUniFrac(
-      x = t(counts(mia)), tree = rowTree(mia),
-      weighted = FALSE, normalized = FALSE, BPPARAM = bpp)
-
-    pcoa <- stats::cmdscale(unifrac, k = ncomps)
-    SingleCellExperiment::reducedDim(mia, altexp_name) <- pcoa
-
-
-  } else if (dist_name == "w_unifrac") {
-    unifrac <- mia::calculateUniFrac(
-      x = t(counts(mia)), tree = rowTree(mia),
-      weighted = TRUE, normalized = FALSE, BPPARAM = bpp)
-
-    pcoa <- stats::cmdscale(unifrac, k = ncomps)
-    SingleCellExperiment::reducedDim(mia, altexp_name) <- pcoa
-  } else if (dist_name == "w_unifrac_norm") {
-
-    unifrac <- mia::calculateUniFrac(
-      x = t(counts(mia)), tree = rowTree(mia),
-      weighted = TRUE, normalized = TRUE, BPPARAM = bpp)
-    pcoa <- stats::cmdscale(unifrac, k = ncomps)
-    SingleCellExperiment::reducedDim(mia, altexp_name) <- pcoa
-
-  } else {
-    stop(dist_name, " distance not available")
-  }
-  mia
-
-}
-
-
-
-if (!is.null(config$beta_div)) {
-  for (div in config$beta_div) {
-    out <- compute_mds_wrap(out, div, str_c("all_", div), config$comps)
-  }
-}
-
-if (any(config$beta_group != "all")) {
-
-  beta_group <- config$beta_group
-  beta_group <- beta_group[beta_group != "all"]
-  grouped <- purrr::map(beta_group,
-    ~ mia::agglomerateByRank(out, rank = ., na.rm = FALSE))
-  names(grouped) <- beta_group
-
-  config$beta_div <- config$beta_div[!str_detect(config$beta_div, "unifrac")]
-
-  for (gg in names(grouped)) {
-  message(gg)
-    for (div in config$beta_div) {
-      grouped[[gg]] <- compute_mds_wrap(grouped[[gg]], div,
-        str_c(gg, div, sep = "_"), config$comps)
-    }
-  }
-
-  SingleCellExperiment::altExps(out) <- grouped
-}
-
+  
 metadata(out)[["date_processed"]] <- Sys.Date()
 metadata(out)[["sequences"]] <- asv_sequences
 
 fs::dir_create(dirname(arguments$mia_file))
 qs::qsave(out, arguments$mia_file)
 message("done!")
+
+# bpp <- BiocParallel::MulticoreParam(workers = as.numeric(arguments$cores))
+
+# message("estimate diversity")
+# out <- mia::estimateDiversity(out, abund_values = "counts", BPPARAM = bpp)
+
+# message("estimate richness")
+# out <- mia::estimateRichness(out, abund_values = "counts", BPPARAM = bpp)
+
+# if (!is.null(arguments$config)) {
+
+#   config <- yaml::read_yaml(arguments$config)[["beta"]]
+
+# }
+
+# compute_mds_wrap <- function(mia, dist_name, altexp_name, ncomps) {
+
+#   message("computing beta diversity for ", dist_name)
+
+#   if (dist_name %in% c("bray", "euclidean", "hellinger", "mahalanobis",
+#     "manhattan", "bhjattacharyya", "canberra", "chord")) {
+
+#     mia <- scater::runMDS(
+#       mia, FUN = parallelDist::parDist,
+#       method = dist_name, threads = as.numeric(arguments$cores),
+#       name = altexp_name, ncomponents = ncomps, exprs_values = "counts",
+#       keep_dist = FALSE)
+
+#   } else if (dist_name == "fjaccard") {
+
+#     mia <- scater::runMDS(
+#       mia, FUN = parallelDist::parDist,
+#       method = "fJaccard", threads = as.numeric(arguments$cores),
+#       name = altexp_name, ncomponents = ncomps, exprs_values = "counts",
+#       keep_dist = FALSE)
+
+#   } else if (dist_name == "unifrac") {
+
+#     unifrac <- mia::calculateUniFrac(
+#       x = t(counts(mia)), tree = rowTree(mia),
+#       weighted = FALSE, normalized = FALSE, BPPARAM = bpp)
+
+#     pcoa <- stats::cmdscale(unifrac, k = ncomps)
+#     SingleCellExperiment::reducedDim(mia, altexp_name) <- pcoa
+
+
+#   } else if (dist_name == "w_unifrac") {
+#     unifrac <- mia::calculateUniFrac(
+#       x = t(counts(mia)), tree = rowTree(mia),
+#       weighted = TRUE, normalized = FALSE, BPPARAM = bpp)
+
+#     pcoa <- stats::cmdscale(unifrac, k = ncomps)
+#     SingleCellExperiment::reducedDim(mia, altexp_name) <- pcoa
+#   } else if (dist_name == "w_unifrac_norm") {
+
+#     unifrac <- mia::calculateUniFrac(
+#       x = t(counts(mia)), tree = rowTree(mia),
+#       weighted = TRUE, normalized = TRUE, BPPARAM = bpp)
+#     pcoa <- stats::cmdscale(unifrac, k = ncomps)
+#     SingleCellExperiment::reducedDim(mia, altexp_name) <- pcoa
+
+#   } else {
+#     stop(dist_name, " distance not available")
+#   }
+#   mia
+
+# }
+
+
+
+# if (!is.null(config$beta_div)) {
+#   for (div in config$beta_div) {
+#     out <- compute_mds_wrap(out, div, str_c("all_", div), config$comps)
+#   }
+# }
+
+# if (any(config$beta_group != "all")) {
+
+#   beta_group <- config$beta_group
+#   beta_group <- beta_group[beta_group != "all"]
+#   grouped <- purrr::map(beta_group,
+#     ~ mia::agglomerateByRank(out, rank = ., na.rm = FALSE))
+#   names(grouped) <- beta_group
+
+#   config$beta_div <- config$beta_div[!str_detect(config$beta_div, "unifrac")]
+
+#   for (gg in names(grouped)) {
+#   message(gg)
+#     for (div in config$beta_div) {
+#       grouped[[gg]] <- compute_mds_wrap(grouped[[gg]], div,
+#         str_c(gg, div, sep = "_"), config$comps)
+#     }
+#   }
+
+#   SingleCellExperiment::altExps(out) <- grouped
+# }
+

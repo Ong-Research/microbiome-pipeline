@@ -7,7 +7,6 @@
 # general parameters for run
 asv_prefix: "HSD2M"
 sample_table: "samples.tsv"
-metadata: "meta.tsv"
 threads: 32
 
 # dada2 filter and trim
@@ -119,7 +118,7 @@ blast:
 # any of c("bray", "fjaccard", "euclidean",
   # "hellinger", "mahalanobis", "manhattan", "bhjattacharyya", "canberra",
   # "chord", "unifrac", "w_unifrac", "w_unifrac_norm")
-beta:
-  comps: 20
-  beta_div: ["bray", "fjaccard", "unifrac", "w_unifrac"]
-  beta_group: ["all"]
+# beta:
+#   comps: 20
+#   beta_div: ["bray", "fjaccard", "unifrac", "w_unifrac"]
+#   beta_group: ["all"]

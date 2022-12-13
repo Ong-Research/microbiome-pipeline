@@ -31,7 +31,7 @@ if (!interactive()) {
 
 if (interactive()) {
   arguments$asv <- "output/dada2/after_qc/asv_mat_wo_chim.qs"
-  arguments$meta <- "data/meta.qs"
+  arguments$meta <- "output/predada2/meta.qs"
 }
 
 print(arguments)

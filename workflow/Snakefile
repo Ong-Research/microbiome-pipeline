@@ -68,10 +68,7 @@ rule dada2:
     sample_table["merges"].tolist(),
     expand("output/dada2/asv_batch/{batch}_asv.qs", batch = batches),
     expand("output/dada2/asv_batch/{batch}_summary.tsv", batch = batches),
-    "output/dada2/remove_chim/asv_mat_wo_chim.qs"
-
-rule dada2_qc:
-  input:
+    "output/dada2/remove_chim/asv_mat_wo_chim.qs",
     "output/dada2/after_qc/asv_mat_wo_chim.qs",
     "workflow/report/dada2qc/asv_matrix_wo_chim.png",
     "workflow/report/dada2qc/nasvs_by_seqlength.png",
@@ -115,13 +112,13 @@ rule phylotree:
 rule clean_phylotree:
   shell:
     "rm -fr output/phylotree"
-    
+
 rule mia:
   input:
     asv = "output/dada2/after_qc/asv_mat_wo_chim.qs",
-    taxa = "output/taxa/kraken/minikraken/kraken_taxatable.qs",
+    taxa = "output/taxa/kraken_merged/kraken_rdata.qs",
     tree = "output/phylotree/newick/tree.nwk",
-    meta = config["metadata"]
+    meta = "output/predada2/meta.tsv"
   output:
     mia = "output/mia/mia_object.qs"
   params:
@@ -137,32 +134,9 @@ rule mia:
       --asv_prefix={params.prefix} --log={log} \
       --config={params.config} --cores={threads}"""
 
-# alternative to rule mia: generate mia objects for all databases
-rule mia_all:
+rule clean_mia:
   input:
-    expand("output/mia_{ref}/mia_object.qs",
-      ref = ["greengenes", "silva", "rdp", "minikraken"])
-
-rule mia_database:
-  input:
-    asv = "output/dada2/after_qc/asv_mat_wo_chim.qs",
-    taxa = "output/taxa/kraken/{ref}/kraken_taxatable.qs",
-    tree = "output/phylotree/newick/tree.nwk",
-    meta = config["metadata"]
-  output:
-    mia = "output/mia_{ref}/mia_object.qs"
-  params:
-    prefix = config['asv_prefix'],
-    config = "config/config.yaml"
-  log:
-    "logs/prepare_mia_object_{ref}.log"
-  threads: config["threads"]
-  shell:
-    """Rscript workflow/scripts/mia/prepare_mia_object.R \
-      {output.mia} --asv={input.asv} --taxa={input.taxa} \
-      --tree={input.tree} --meta={input.meta} \
-      --asv_prefix={params.prefix} --log={log} \
-      --config={params.config} --cores={threads}"""
+    """rm -fr output/mia/mia_object.qs"""
 
 #include: "rules/extra_dust.smk"
 include: "rules/quality_control.smk"

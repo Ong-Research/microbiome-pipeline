@@ -138,6 +138,20 @@ rule clean_mia:
   input:
     """rm -fr output/mia/mia_object.qs"""
 
+rule make_dags:
+  output:
+    mia_dag = "workflow/report/rulegraph/mia.png",
+    dada2_dag = "workflow/report/rulegraph/dada2.png",
+    taxonomy_dag = "workflow/report/rulegraph/taxa.png",
+    phylo_dag = "workflow/report/rulegraph/phylo.png"
+  shell:
+    """
+    snakemake --forceall --rulegraph mia | dot -Tpng > {output.mia_dag}
+    snakemake --rulegraph dada2 | dot -Tpng > {output.dada2_dag}
+    snakemake --rulegraph taxonomy | dot -Tpng > {output.taxonomy_dag}
+    snakemake --rulegraph phylotree | dot -Tpng > {output.phylo_dag}
+    """
+
 #include: "rules/extra_dust.smk"
 include: "rules/quality_control.smk"
 include: "rules/prepare_dada2.smk"

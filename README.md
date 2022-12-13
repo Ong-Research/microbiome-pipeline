@@ -234,7 +234,9 @@ time they are run because they install conda environments.
 * `snakemake -j{cores} phylotree --use-conda` computes the phylogenetic tree using `qiime2`'s FastTree
 * `snakemake -j{cores} mia` prepare the `TreeSummarizedExperiment` containing all the data generated
 
-![microbiome_pipeline](microbiome.png)
+![microbiome_pipeline](workflow/report/rulegraph/mia.png)
+
+
 
 ## Cite
 

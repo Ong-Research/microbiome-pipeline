@@ -24,6 +24,15 @@ There are two steps to install the pipeline:
     conda env create -n {env_name} --file dependencies.yml
     conda env create -n microbiome --file dependencies.yml
     ```
+    
+    Alternatively, [mamba](https://github.com/mamba-org/mamba) could be used:
+
+
+    ```sh
+    mamba env create -n {env_name} --file dependencies.yml
+    mamba env create -n microbiome --file dependencies.yml
+    ```
+
 
 2. **Install R packages:** To install the R packages used by this pipeline use:
 

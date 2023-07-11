@@ -21,7 +21,6 @@ rule fastqc:
   conda:
     "../envs/fastqc.yaml"
   output:
-    html=temp(expand("output/quality_control/fastqc/{sample}_fastqc.html", sample = all_files)), 
     zip=temp(expand("output/quality_control/fastqc/{sample}_fastqc.zip", sample = all_files))
   log:
     "logs/qc/fastqc.txt"

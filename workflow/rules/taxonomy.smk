@@ -1,6 +1,6 @@
 rule extract_fasta:
   input:
-    asv = "output/dada2/after_qc/asv_mat_wo_chim.qs"
+    asv = "output/dada2/remove_chim/asv_mat_wo_chim.qs"
   output:
     fasta = "output/taxa/fasta/asv_sequences.fa"
   params:
@@ -29,12 +29,15 @@ rule kraken_taxonomy:
     confidence = config["kraken_confidence"]
   log:
     "logs/taxonomy/kraken2_{ref}.txt"
+  resources:
+    mem_mb = 100000
   shell:
     """kraken2 --db {input.ref} --threads {threads} \
       --output {output.out} --use-names \
       --report {output.summary} --use-mpa-style \
       --confidence {params.confidence} \
       --classified-out {output.classified} \
+      --memory-mapping \
       --unclassified-out {output.unclassified} {input.fasta}"""
 
 rule blast_fast_single:
@@ -51,7 +54,7 @@ rule blast_fast_single:
     """blastn -db {params.db} -query {input.fasta} \
       -out {output.blast} -outfmt {params.fmt} \
       -perc_identity {params.perc} \
-      -mt_mode 1 -num_threads {threads}"""
+      -num_threads {threads}"""
 
 
 rule clean_kraken_with_blast:

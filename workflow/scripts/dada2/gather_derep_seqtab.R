@@ -59,7 +59,11 @@ library(yaml)
 
 derep_files <- arguments$derep_file
 
-stopifnot(any(file.exists(derep_files)), file.exists(arguments$config))
+# stopifnot(any(file.exists(derep_files)), file.exists(arguments$config))
+stopifnot(all(file.exists(derep_files)), file.exists(arguments$config))
+
+# remove the files for samples where all reads were filtered out
+derep_files <- derep_files[file.exists(derep_files)]
 
 # Identify and remove empty files.
 # These are placeholder files that were created
@@ -98,9 +102,9 @@ derep_tb %<>%
 
 config <- yaml::read_yaml(arguments$config)
 
-stopifnot(file.exists(config$sample_table))
+stopifnot(file.exists(config$samples_file))
 
-sample_tb <- readr::read_tsv(config$sample_table) %>%
+sample_tb <- readr::read_tsv(config$samples_file) %>%
   dplyr::left_join(derep_tb)
 
 # now do some checking to make sure we only have

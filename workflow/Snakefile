@@ -109,10 +109,10 @@ rule clean_phylotree:
 
 rule mia:
   input:
-    asv = "output/dada2/after_qc/asv_mat_wo_chim.qs",
+    asv = "output/dada2/remove_chim/asv_mat_wo_chim.qs",
     taxa = "output/taxa/kraken_merged/kraken_rdata.qs",
     tree = "output/phylotree/newick/tree.nwk",
-    meta = "output/predada2/meta.tsv"
+    meta = config["metadata_file"]
   output:
     mia = "output/mia/mia_object.qs"
   params:

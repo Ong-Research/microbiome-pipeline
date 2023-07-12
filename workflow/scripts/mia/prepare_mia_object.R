@@ -35,11 +35,11 @@ if (!interactive()) {
 
 if (interactive()) {
 
-  arguments$asv <- "output/dada2/after_qc/asv_mat_wo_chim.qs"
+  arguments$asv <- "output/dada2/remove_chim/asv_mat_wo_chim.qs"
   arguments$taxa <- "output/taxa/kraken_merged/kraken_rdata.qs"
   arguments$tree <- "output/phylotree/newick/tree.nwk"
-  arguments$meta <- "output/predada2/meta.tsv"
-  arguments$asv_prefix <- "HSD2M"
+  arguments$meta <- "output/init/metadata.qs"
+  arguments$asv_prefix <- "asv"
 
 }
 
@@ -72,7 +72,12 @@ if (!is.null(arguments$config)) stopifnot(file.exists(arguments$config))
 asv <- qs::qread(arguments$asv)
 taxa <- qs::qread(arguments$taxa)
 tree <- ape::read.tree(arguments$tree)
-meta <- readr::read_tsv(arguments$meta)
+
+if (tools::file_ext(arguments$meta) == "tsv") {
+  meta <- readr::read_tsv(arguments$meta)
+} else if (tools::file_ext(arguments$meta) == "qs") {
+  meta <- qs::qread(arguments$meta)
+}
 
 cdata <- meta %>%
   as.data.frame() %>%
@@ -80,8 +85,7 @@ cdata <- meta %>%
 
 # clean samples
 sample_names <- intersect(
-  cdata %>%
-    rownames(),
+  rownames(cdata),
   rownames(asv))
 
 # clean ASVs
@@ -94,19 +98,20 @@ asv_sequences <- Biostrings::DNAStringSet(asv_sequences)
 taxa %<>%
   dplyr::add_count(asv) %>%
   dplyr::filter(n == 1) %>%
-  dplyr::select(-n) %>%
-  dplyr::select(-kraken_db, -criteria)
+  dplyr::select(asv, taxa, taxid, domain, phylum, class, order, family,
+    genus, species, kraken_db)
 
 asv_names <- intersect(names(asv_sequences), taxa$asv)
 
 asv <- asv[, asv_names]
 asv_sequences <- asv_sequences[asv_names, ]
 
+
 tree$tip.label %<>%
-  stringr::str_remove_all("\\'") # either qiime2 or ape is adding "'" at the 
+  stringr::str_sub(2, nchar(.) - 1) # either qiime2 or ape is adding "'" at the 
   # start and end of ASV names
 
-tree <- ape::keep.tip(tree, asv_names)
+tree <- ape::keep.tip(tree, intersect(asv_names, tree$tip.label))
 
 rdata <- taxa %>%
     as.data.frame() %>%

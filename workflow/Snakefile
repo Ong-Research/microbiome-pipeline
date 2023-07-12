@@ -97,10 +97,10 @@ rule clean_taxonomy:
 
 rule phylotree:
   input:
-    "output/phylotree/aligned_sequences.qza",
-    "output/phylotree/masked_aligned_sequences.qza",
-    "output/phylotree/unrooted_tree.qza",
-    "output/phylotree/rooted_tree.qza",
+    # "output/phylotree/aligned_sequences.qza",
+    # "output/phylotree/masked_aligned_sequences.qza",
+    # "output/phylotree/unrooted_tree.qza",
+    # "output/phylotree/rooted_tree.qza",
     "output/phylotree/newick/tree.nwk"
 
 rule clean_phylotree:
@@ -150,4 +150,4 @@ rule make_dags:
 include: "rules/quality_control.smk"
 include: "rules/dada2.smk"
 include: "rules/taxonomy.smk"
-include: "rules/phylo_tree.smk"
+include: "rules/phylo_tree_fastreeR.smk"

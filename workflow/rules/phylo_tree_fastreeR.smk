@@ -7,5 +7,7 @@ rule create_tree:
     fasta = "output/taxa/fasta/asv_sequences.fa"
   output:
     tree = "output/phylotree/newick/tree.nwk"
+  resources:
+    mem_mb=128000    
   script:
     """../scripts/phylo/compute_tree.R"""

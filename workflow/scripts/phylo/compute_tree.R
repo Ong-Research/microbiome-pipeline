@@ -2,6 +2,8 @@
 library(fastreeR)
 library(ape)
 
+options(java.parameters = "-Xmx64000m")
+
 fasta <- snakemake@input[["fasta"]]
 
 message("computes the distance matrix between fasta sequences")

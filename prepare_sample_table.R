@@ -1,4 +1,4 @@
-#!/ua/rwelch/miniconda3/envs/wiscdust/bin/Rscript
+#!/data/rwelch/programs/anaconda3/envs/microbiome2/bin/Rscript
 
 #' Creates a sample table with columns `batch|file_key|R1_file|R2_file` based on
 #' the contents of a predefined directory

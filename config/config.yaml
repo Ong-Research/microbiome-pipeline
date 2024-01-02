@@ -15,33 +15,33 @@ threads: 32
 
 # dada2 filter and trim
 filter_and_trim:
-  "2018":
+  "230421_KYWK8":
     truncQ: 2
-    truncLen: 0
+    truncLen: [280, 250]
     trimLeft: 0
     trimRight: 0
     maxLen: Inf
-    minLen: 150
+    minLen: 250
     maxN: 0
     minQ: 0
     maxEE: 2
-  "2020":
+  "230421_KYWKG":
     truncQ: 2
-    truncLen: 0
+    truncLen: [280, 250]
     trimLeft: 0
     trimRight: 0
     maxLen: Inf
-    minLen: 150
+    minLen: 250
     maxN: 0
     minQ: 0
     maxEE: 2
-  "2022":
+  "230421_L2BLJ":
     truncQ: 2
-    truncLen: 0
+    truncLen: [280, 250]
     trimLeft: 0
     trimRight: 0
     maxLen: Inf
-    minLen: 150
+    minLen: 250
     maxN: 0
     minQ: 0
     maxEE: 2
@@ -49,23 +49,23 @@ filter_and_trim:
 
 # dada2 learn error rates
 error_rates:
-  "2018":
+  "230421_KYWK8":
     learn_nbases: 100e6
-  "2020":
+  "230421_KYWKG":
     learn_nbases: 100e6
-  "2022":
+  "230421_L2BLJ":
     learn_nbases: 100e6
 
 # dada2 merge pairs
 merge_pairs:
-  "2018":
-    minOverlap: 25
+  "230421_KYWK8":
+    minOverlap: 50
     maxMismatch: 0
-  "2020":
-    minOverlap: 25
+  "230421_KYWKG":
+    minOverlap: 50
     maxMismatch: 0
-  "2022":
-    minOverlap: 25
+  "230421_L2BLJ":
+    minOverlap: 50
     maxMismatch: 0
 
 # dada2 remove chimeras

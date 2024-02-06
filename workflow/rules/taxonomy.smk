@@ -49,7 +49,7 @@ rule blast_fast_single:
     db = "data/blast_dbs/{db}",
     fmt = config["blast"]["format"],
     perc = config["blast"]["perc"]
-  threads: 24
+  threads: config["threads"]
   shell:
     """blastn -db {params.db} -query {input.fasta} \
       -out {output.blast} -outfmt {params.fmt} \

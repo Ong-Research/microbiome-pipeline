@@ -15,7 +15,7 @@ threads: 32
 
 # dada2 filter and trim
 filter_and_trim:
-  "230421_KYWK8":
+  "dust2m_dec2018_C75PR":
     truncQ: 2
     truncLen: [280, 250]
     trimLeft: 0
@@ -25,7 +25,17 @@ filter_and_trim:
     maxN: 0
     minQ: 0
     maxEE: 2
-  "230421_KYWKG":
+  "dust2m_dec2018_C76L2":
+    truncQ: 2
+    truncLen: [280, 250]
+    trimLeft: 0
+    trimRight: 0
+    maxLen: Inf
+    minLen: 250
+    maxN: 0
+    minQ: 0
+    maxEE: 2    
+  "dust2m_dec2019":
     truncQ: 2
     truncLen: [280, 250]
     trimLeft: 0
@@ -35,7 +45,17 @@ filter_and_trim:
     maxN: 0
     minQ: 0
     maxEE: 2
-  "230421_L2BLJ":
+  "dust2m_jun2021":
+    truncQ: 2
+    truncLen: [280, 250]
+    trimLeft: 0
+    trimRight: 0
+    maxLen: Inf
+    minLen: 250
+    maxN: 0
+    minQ: 0
+    maxEE: 2    
+  "dust9m_apr2023_KYWK8":
     truncQ: 2
     truncLen: [280, 250]
     trimLeft: 0
@@ -45,27 +65,66 @@ filter_and_trim:
     maxN: 0
     minQ: 0
     maxEE: 2
-
+  "dust9m_apr2023_KYWKG":
+    truncQ: 2
+    truncLen: [280, 250]
+    trimLeft: 0
+    trimRight: 0
+    maxLen: Inf
+    minLen: 250
+    maxN: 0
+    minQ: 0
+    maxEE: 2
+  "dust9m_apr2023_L2BLJ":
+    truncQ: 2
+    truncLen: [280, 250]
+    trimLeft: 0
+    trimRight: 0
+    maxLen: Inf
+    minLen: 250
+    maxN: 0
+    minQ: 0
+    maxEE: 2
 
 # dada2 learn error rates
 error_rates:
-  "230421_KYWK8":
+  "dust2m_dec2018_C75PR":
     learn_nbases: 100e6
-  "230421_KYWKG":
+  "dust2m_dec2018_C76L2":
     learn_nbases: 100e6
-  "230421_L2BLJ":
+  "dust2m_dec2019":
+    learn_nbases: 100e6
+  "dust2m_jun2021":
+    learn_nbases: 100e6
+  "dust9m_apr2023_KYWK8":
+    learn_nbases: 100e6
+  "dust9m_apr2023_KYWKG":
+    learn_nbases: 100e6
+  "dust9m_apr2023_L2BLJ":
     learn_nbases: 100e6
 
 # dada2 merge pairs
 merge_pairs:
-  "230421_KYWK8":
-    minOverlap: 50
+  "dust2m_dec2018_C75PR":
+    minOverlap: 70
     maxMismatch: 0
-  "230421_KYWKG":
-    minOverlap: 50
+  "dust2m_dec2018_C76L2":
+    minOverlap: 70
     maxMismatch: 0
-  "230421_L2BLJ":
-    minOverlap: 50
+  "dust2m_dec2019":
+    minOverlap: 70
+    maxMismatch: 0
+  "dust2m_jun2021":
+    minOverlap: 70
+    maxMismatch: 0    
+  "dust9m_apr2023_KYWK8":
+    minOverlap: 70
+    maxMismatch: 0
+  "dust9m_apr2023_KYWKG":
+    minOverlap: 70
+    maxMismatch: 0
+  "dust9m_apr2023_L2BLJ":
+    minOverlap: 70
     maxMismatch: 0
 
 # dada2 remove chimeras
@@ -77,6 +136,7 @@ remove_chimeras:
   minOneOffParentDistance: 4
   maxShift: 16
   chimera_method: "consensus"    
+   
 
 # qc parameters
 # negctrl_prop: proportion of negative control reads to be subtracted from sample reads vectors
